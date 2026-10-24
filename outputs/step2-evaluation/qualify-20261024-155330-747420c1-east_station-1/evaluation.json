@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "goal": [
+    3.0,
+    1.0
+  ],
+  "tolerance_m": 0.25,
+  "driver_result": "GOAL REACHED!",
+  "driver_exit_code": 0,
+  "final_world_position": [
+    2.8369245477313894,
+    1.0944942547559655
+  ],
+  "final_odometry": [
+    2.9712888020755526,
+    1.0060333172301903
+  ],
+  "support_contact_count": 15028,
+  "obstacle_collisions": [],
+  "world_goal_error_m": 0.18847484530965192,
+  "odometry_goal_error_m": 0.02933826516781293,
+  "odometry_world_difference_m": 0.16086979304208138,
+  "odometry_goal_reached": true,
+  "world_goal_reached": true,
+  "reason": "World-position goal and contact checks passed",
+  "world_sample_count": 600,
+  "max_world_odom_difference_m": 0.1757800688535536,
+  "observed_frames": [
+    [
+      "practice",
+      "practice_robot"
+    ]
+  ],
+  "driver_version": "v5",
+  "world_topic": "/step2/ground_truth",
+  "ground_truth_used_for_navigation": false
+}

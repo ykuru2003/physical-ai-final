@@ -1,0 +1,29 @@
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+*.py text eol=lf
+*.sdf text eol=lf
+*.yaml text eol=lf
+*.ps1 text eol=crlf
+*.safetensors -text
+*.npz -text
+*.parquet -text
+*.mp4 -text
+
+# Preserve the exact bytes used by validation fingerprints.
+simulation/config/bridge.yaml -text
+simulation/launch/simulation.launch.py -text
+simulation/worlds/practice.sdf -text
+scripts/drive_to_goal_v5.py -text
+scripts/evaluate_step2.py -text
+scripts/destination_control.py -text
+scripts/validate_local_ai.py -text
+outputs/local-ai-validation.json -text
+outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/evaluation.json -text
+outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/evaluation.json -text
+outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/evaluation.json -text
+outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/evaluation.json -text
+outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/evaluation.json -text
+outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/evaluation.json -text
+outputs/step3-final-verification.json -text

@@ -1,0 +1,6 @@
+.git
+workshop
+outputs
+work
+**/__pycache__
+**/.pytest_cache
