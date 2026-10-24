@@ -23,54 +23,54 @@ id_rsa
 id_ed25519
 **/service-account*.json
 
-# Local backups must never be uploaded.
+# Local backups, environments and generated workshop files.
 *.bak
 *.orig
 *~
-
-# Generated run artifacts and ROS recordings must never be uploaded.
-outputs/*
-!outputs/.gitkeep
-work/
-*.log
-*.bag
-*.db3
-*.mcap
-
-# Local environments, caches, and downloaded workshop data.
 .venv/
+.uv-cache/
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/
 **/.ipynb_checkpoints/
 **/.cache/
+*.py[cod]
+*.log
 .DS_Store
 Thumbs.db
-workshop/data/
-workshop/artifacts/
-workshop/.venv/
-workshop/.uv-cache/
+/data/
+/artifacts/
+/outputs/
+work/
 
-# Only these reviewed validation results are versioned; all other run output stays local.
-!outputs/local-ai-validation.json
-!outputs/step3-final-verification.json
-!outputs/step2-evaluation/
-outputs/step2-evaluation/*
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/
-outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/*
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/evaluation.json
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/
-outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/*
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/evaluation.json
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/
-outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/*
-!outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/evaluation.json
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/
-outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/*
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/evaluation.json
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/
-outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/*
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/evaluation.json
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/
-outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/*
-!outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/evaluation.json
+# Tool caches and ROS recordings.
+**/.mypy_cache/
+*.bag
+*.db3
+*.mcap
+
+# Version only the reviewed Gazebo evidence; other run artifacts stay local.
+/extensions/gazebo/outputs/*
+!/extensions/gazebo/outputs/.gitkeep
+!/extensions/gazebo/outputs/local-ai-validation.json
+!/extensions/gazebo/outputs/step3-final-verification.json
+!/extensions/gazebo/outputs/step2-evaluation/
+/extensions/gazebo/outputs/step2-evaluation/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/evaluation.json
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/evaluation.json
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/evaluation.json
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/evaluation.json
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/evaluation.json
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/
+/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/*
+!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/evaluation.json

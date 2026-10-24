@@ -1,0 +1,82 @@
+name: Physical AI CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workshop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Dockerの自動ビルド
+        run: docker compose build
+
+      - name: 1. Ruff — code quality
+        run: docker compose run --rm workshop ruff check .
+
+      - name: Download a tiny LeRobot dataset subset
+        run: docker compose run --rm workshop python src/download_dataset.py --max-episodes 20
+
+      - name: 2. Pytest — code, Notebook, and data contracts
+        run: docker compose run --rm workshop pytest -q
+
+      - name: 3. Dataset validation
+        run: docker compose run --rm workshop python src/validate_dataset.py
+
+      - name: 4. ACTの学習経路確認
+        run: docker compose run --rm workshop python src/train.py --config configs/train_ci.yaml
+
+      - name: 5. PushTの自動評価
+        run: docker compose run --rm workshop python src/eval.py --config configs/eval_ci.yaml
+
+      - name: Keep CI evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: roboops-ci-evidence
+          path: |
+            artifacts/checkpoints/lerobot-act-ci/training_metrics.json
+            artifacts/evaluation/metrics-ci.json
+          if-no-files-found: warn
+
+  offline:
+    name: Gazebo Python offline checks
+    defaults:
+      run:
+        working-directory: extensions/gazebo
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check syntax and run offline tests
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/run_offline_checks.py
+      - name: Check the workshop-first repository layout
+        working-directory: .
+        run: python tests/test_layout.py
+      - name: Check all commands without services
+        working-directory: .
+        shell: pwsh
+        run: ./tests/powershell/Test-Project.ps1

@@ -1,0 +1,56 @@
+{
+  "overall_status": "PASS",
+  "integration_results": [
+    {
+      "path": "outputs/language-goals/20261024-165000-802f0bb2/selection.json",
+      "instruction": "東側の資材受け渡し場所に行ってください",
+      "status": "PASS",
+      "destination": "east_station",
+      "model": "qwen3:1.7b",
+      "decision": "select",
+      "movement_started": true,
+      "world_error_m": 0.19598359831649395,
+      "collisions": [],
+      "initial_stop": "CONFIRMED_STATIONARY",
+      "final_stop": "CONFIRMED_STATIONARY"
+    },
+    {
+      "path": "outputs/language-goals/20261024-165112-d3a817ba/selection.json",
+      "instruction": "南東の点検場所まで向かってください",
+      "status": "PASS",
+      "destination": "south_station",
+      "model": "qwen3:1.7b",
+      "decision": "select",
+      "movement_started": true,
+      "world_error_m": 0.14703674579687487,
+      "collisions": [],
+      "initial_stop": "CONFIRMED_STATIONARY",
+      "final_stop": "CONFIRMED_STATIONARY"
+    },
+    {
+      "path": "outputs/language-goals/20261024-165142-d8cb7e7a/selection.json",
+      "instruction": "登録されていないコンビニに行って",
+      "status": "REJECTED",
+      "destination": null,
+      "model": "qwen3:1.7b",
+      "decision": "unknown",
+      "movement_started": false,
+      "world_error_m": null,
+      "collisions": null,
+      "initial_stop": "CONFIRMED_STATIONARY",
+      "final_stop": "CONFIRMED_STATIONARY"
+    }
+  ],
+  "real_ai_model": "qwen3:1.7b",
+  "real_ai_cases": 30,
+  "real_ai_passed": 30,
+  "qualification_valid": {
+    "east_station": true,
+    "south_station": true
+  },
+  "remaining": [],
+  "real_ai_certificate_valid": true,
+  "offline_tests": 27,
+  "synthetic_cases": 12,
+  "evaluator_tests": 4
+}
