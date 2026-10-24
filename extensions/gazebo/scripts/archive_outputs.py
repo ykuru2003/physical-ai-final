@@ -12,10 +12,10 @@ import time
 import uuid
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_MARKERS = ('navigation.lock', 'step2-autotest.request', 'step2-autotest.running')
 KEEP_OUTPUTS = (
-    '.gitkeep', 'local-ai-validation.json', 'step3-final-verification.json',
+    'local-ai-validation.json', 'step3-final-verification.json',
     'step2-run.json', 'step2-run.log', 'step3-full-check.log',
 )
 
@@ -82,7 +82,7 @@ def plan_archive(root, include_work=False):
         if not path.is_file():
             continue
         checked = checked_file(root, path)
-        if checked in keep or checked.is_relative_to((root / 'outputs/offline').resolve()):
+        if checked in keep:
             continue
         sources.append(path)
     if include_work and (root / 'work').exists():

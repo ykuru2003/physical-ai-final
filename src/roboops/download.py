@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import shutil
 from pathlib import Path
 
 import numpy as np
-import torch
-from huggingface_hub import hf_hub_download
 
 from roboops.schema import DATASET_ID, DATASET_REVISION, EXPECTED_SHAPES
 
@@ -22,26 +22,61 @@ DATASET_FILES = (
 
 
 def _to_numpy(value: object, dtype: np.dtype) -> np.ndarray:
+    import torch
+
     if isinstance(value, torch.Tensor):
         return value.detach().cpu().numpy().astype(dtype, copy=False)
     return np.asarray(value, dtype=dtype)
 
 
-def _download_pinned_files(raw_root: Path) -> None:
-    """Fetch exact files without the Hub tree API used by snapshot_download.
+def prepare_source(raw_root: Path) -> None:
+    """Keep pinned source data separate from the Hub's download cache.
 
-    GitHub-hosted runners share outbound IP addresses, so unauthenticated tree
-    listing can be rate-limited even for this public Dataset. The pinned
-    revision has one data chunk, making direct file downloads deterministic.
+    A manifest binds local files to their dataset revision and content hashes.
+    Hub cache layout and lock files stay outside data/.
     """
+    manifest_path = raw_root / "source.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (
+            manifest["dataset_id"] == DATASET_ID
+            and manifest["dataset_revision"] == DATASET_REVISION
+            and all(
+                hashlib.sha256((raw_root / name).read_bytes()).hexdigest()
+                == manifest["files"][name]
+                for name in DATASET_FILES
+            )
+        ):
+            return
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+
+    from huggingface_hub import hf_hub_download
+
+    hashes = {}
     for filename in DATASET_FILES:
-        hf_hub_download(
+        cached = hf_hub_download(
             repo_id=DATASET_ID,
             filename=filename,
             repo_type="dataset",
             revision=DATASET_REVISION,
-            local_dir=raw_root,
         )
+        target = raw_root / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(cached, target)
+        hashes[filename] = hashlib.sha256(target.read_bytes()).hexdigest()
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "dataset_id": DATASET_ID,
+                "dataset_revision": DATASET_REVISION,
+                "files": hashes,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _cache_matches(output: Path, manifest_path: Path, requested_episodes: int) -> bool:
@@ -80,7 +115,7 @@ def download_dataset(
     print(f"Source: https://huggingface.co/datasets/{DATASET_ID}")
     print(f"Pinned revision: {DATASET_REVISION[:12]}")
 
-    _download_pinned_files(raw_root)
+    prepare_source(raw_root)
     metadata = LeRobotDatasetMetadata(
         DATASET_ID,
         root=raw_root,

@@ -1,10 +1,10 @@
 # One PowerShell suite for workshop and simulator commands. All services are mocked.
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
-$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $cacheRoot = [IO.Path]::GetFullPath((Join-Path $root '.cache/test-runs'))
 if ($env:PHYSICAL_AI_TEST_SCRIPT -ne $PSCommandPath) {
-    $runner = Join-Path $root 'tests/support/run_powershell.py'
+    $runner = Join-Path $root 'tests/run_powershell.py'
     $python = (Get-Command python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
     $shell = @('pwsh', 'pwsh.exe', 'powershell.exe') | ForEach-Object { Join-Path $PSHOME $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if (-not $shell) { throw 'Cannot locate PowerShell for the isolated test process.' }
@@ -177,7 +177,7 @@ try {
     Test-Case 'Clean preview and apply preserve argument boundaries and use the absolute script path' {
         & $launcher Clean -CheckOnly | Out-Null
         $preview = $global:PhysicalAiTestPythonCalls[-1].Arguments
-        Assert-True ($preview[0] -eq (Join-Path $global:PhysicalAiTestFixtureRoot 'scripts/maintenance/archive_outputs.py')) 'Clean used the wrong implementation.'
+        Assert-True ($preview[0] -eq (Join-Path $global:PhysicalAiTestFixtureRoot 'scripts/archive_outputs.py')) 'Clean used the wrong implementation.'
         Assert-True ($preview -notcontains '--apply') 'Clean CheckOnly applied changes.'
         & $launcher Clean | Out-Null
         $apply = $global:PhysicalAiTestPythonCalls[-1].Arguments

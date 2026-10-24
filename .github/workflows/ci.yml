@@ -29,19 +29,19 @@ jobs:
         run: docker compose run --rm workshop ruff check .
 
       - name: Download a tiny LeRobot dataset subset
-        run: docker compose run --rm workshop python src/download_dataset.py --max-episodes 20
+        run: docker compose run --rm workshop python -m roboops download --max-episodes 20
 
       - name: 2. Pytest — code, Notebook, and data contracts
         run: docker compose run --rm workshop pytest -q
 
       - name: 3. Dataset validation
-        run: docker compose run --rm workshop python src/validate_dataset.py
+        run: docker compose run --rm workshop python -m roboops validate
 
       - name: 4. ACTの学習経路確認
-        run: docker compose run --rm workshop python src/train.py --config configs/train_ci.yaml
+        run: docker compose run --rm workshop python -m roboops train --config configs/train_ci.yaml
 
       - name: 5. PushTの自動評価
-        run: docker compose run --rm workshop python src/eval.py --config configs/eval_ci.yaml
+        run: docker compose run --rm workshop python -m roboops evaluate --config configs/eval_ci.yaml
 
       - name: Keep CI evidence
         if: always()
@@ -79,4 +79,4 @@ jobs:
       - name: Check all commands without services
         working-directory: .
         shell: pwsh
-        run: ./tests/powershell/Test-Project.ps1
+        run: ./tests/Test-Project.ps1

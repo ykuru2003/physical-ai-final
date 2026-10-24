@@ -51,7 +51,6 @@ work/
 
 # Version only the reviewed Gazebo evidence; other run artifacts stay local.
 /extensions/gazebo/outputs/*
-!/extensions/gazebo/outputs/.gitkeep
 !/extensions/gazebo/outputs/local-ai-validation.json
 !/extensions/gazebo/outputs/step3-final-verification.json
 !/extensions/gazebo/outputs/step2-evaluation/

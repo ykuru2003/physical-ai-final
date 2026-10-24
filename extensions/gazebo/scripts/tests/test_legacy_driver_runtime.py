@@ -5,7 +5,7 @@ from types import ModuleType, SimpleNamespace as NS
 import unittest
 from unittest.mock import Mock, patch
 
-from navigation import ros_driver as runtime
+import ros_driver as runtime
 
 
 class RuntimeTests(unittest.TestCase):
@@ -132,9 +132,9 @@ class RuntimeTests(unittest.TestCase):
         code, _ = self.run_fake(write_error=OSError('disk full'))
         self.assertIsNone(code)
 
-    def test_cli_wrappers_forward_correct_planner_and_node_name(self):
-        from navigation import drive_to_goal_v3 as v3
-        from navigation import drive_to_goal_v4 as v4
+    def test_drivers_select_correct_planner_and_node_name(self):
+        import drive_to_goal_v3 as v3
+        import drive_to_goal_v4 as v4
         for version, driver in (('v3', v3), ('v4', v4)):
             with self.subTest(version=version), patch.object(runtime, 'run_driver', return_value=7) as run:
                 self.assertEqual(driver.main(), 7)

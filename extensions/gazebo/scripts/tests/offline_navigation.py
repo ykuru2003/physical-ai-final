@@ -110,8 +110,22 @@ def run_checks(driver, *, report_name, test_type, goal_tolerance=None):
         test_type=test_type, cases=results, invalid_scan_and_blocked='PASS',
         python_syntax='PASS', sdf_xml_front_support_and_sensors='PASS',
     )
-    output = ROOT / 'outputs/offline' / report_name
+    output = ROOT / '.cache/offline' / report_name
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, indent=2))
     return report
+
+
+def main():
+    import drive_to_goal_v3 as v3
+    import drive_to_goal_v4 as v4
+
+    run_checks(v3, report_name='step2-offline-tests.json',
+               test_type='OFFLINE SYNTHETIC ONLY; NOT GAZEBO/ROS')
+    run_checks(v4, report_name='step2-v4-offline-tests.json',
+               test_type='V4 OFFLINE SYNTHETIC ONLY; NOT GAZEBO/ROS', goal_tolerance=.03)
+
+
+if __name__ == '__main__':
+    main()

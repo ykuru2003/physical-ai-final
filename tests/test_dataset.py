@@ -3,13 +3,13 @@ from pathlib import Path
 import numpy as np
 
 from roboops.data import DatasetBundle, action_chunks, load_npz_dataset
-from validate_dataset import validate
+from roboops.validation import validate
 
 DATASET_PATH = Path("data/processed/pusht_keypoints.npz")
 
 
 def load_workshop_dataset():
-    assert DATASET_PATH.exists(), "Run `python src/download_dataset.py` before pytest"
+    assert DATASET_PATH.exists(), "Run `python -m roboops download` before pytest"
     return load_npz_dataset(DATASET_PATH)
 
 

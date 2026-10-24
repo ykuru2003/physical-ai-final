@@ -244,10 +244,10 @@ class SafetyTests(unittest.TestCase):
         def planner_tree(name):
             tree = ast.parse((dc.ROOT/'scripts'/name).read_text(encoding='utf-8-sig'))
             return ast.dump(next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'LidarPlanner'))
-        self.assertEqual(planner_tree('drive_to_goal_v5.py'), planner_tree('navigation/drive_to_goal_v4.py'))
+        self.assertEqual(planner_tree('drive_to_goal_v5.py'), planner_tree('drive_to_goal_v4.py'))
 
     def qualifier(self, outcomes, stop='CONFIRMED_STATIONARY'):
-        from validation import qualify_destinations as q
+        import qualify_destinations as q
         root = Path(self.temp.name)
         registry_path = root/'registry.json'
         calls = []
@@ -288,7 +288,7 @@ class SafetyTests(unittest.TestCase):
         self.assertNotIn('qualification', destination)
 
     def test_completion_rejects_model_failure_as_unknown_success(self):
-        from validation import complete_step3 as complete
+        import complete_step3 as complete
         audit = {'status': 'REJECTED', 'movement_started': False,
                  'initial_stop': 'CONFIRMED_STATIONARY', 'final_stop': 'CONFIRMED_STATIONARY'}
         with patch.object(dc, 'navigation_lock', return_value=nullcontext()), \
@@ -299,7 +299,7 @@ class SafetyTests(unittest.TestCase):
             complete.check_unknown(self.registry)
 
     def test_completion_requires_intended_destination(self):
-        from validation import complete_step3 as complete
+        import complete_step3 as complete
         audit = {'status': 'PASS', 'destination': 'east_station', 'movement_started': True,
                  'selection': {'destination_id': 'east_station'},
                  'world_evaluation': valid_report(), 'final_stop': 'CONFIRMED_STATIONARY'}
@@ -310,7 +310,7 @@ class SafetyTests(unittest.TestCase):
                 complete.check_navigation('south_station', 'test', self.registry)
 
     def test_completion_resumes_verified_destinations(self):
-        from validation import complete_step3 as complete
+        import complete_step3 as complete
         for force in (False, True):
             with self.subTest(force=force), \
                     patch.object(sys, 'argv', ['complete', '--model', 'gpt-oss:20b'] + (['--recheck-navigation'] if force else [])), \
@@ -327,7 +327,7 @@ class SafetyTests(unittest.TestCase):
                 self.assertEqual(scripts.count('validate_local_ai.py'), 1)
 
     def test_completion_reuses_current_real_ai_certificate(self):
-        from validation import complete_step3 as complete
+        import complete_step3 as complete
         with patch.object(sys, 'argv', ['complete']), \
                 patch.object(dc, 'local_request', return_value={'models': [{'name': 'qwen3:1.7b', 'digest': 'current'}]}), \
                 patch.object(dc, 'load_registry', return_value=self.registry), \
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     report = {'type': 'OFFLINE_SYNTHETIC_AND_MOCKS_ONLY_NOT_GAZEBO_OR_REAL_AI',
               'unit_tests': result.testsRun, 'unit_failures': len(result.failures),
               'unit_errors': len(result.errors), 'synthetic_cases': trials}
-    (dc.ROOT/'outputs/offline').mkdir(parents=True, exist_ok=True)
-    (dc.ROOT/'outputs/offline/destination-offline-tests.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
+    (dc.ROOT/'.cache/offline').mkdir(parents=True, exist_ok=True)
+    (dc.ROOT/'.cache/offline/destination-offline-tests.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
     print(json.dumps(report, indent=2))
     raise SystemExit(0 if result.wasSuccessful() else 1)

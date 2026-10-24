@@ -1,8 +1,11 @@
 """Data and normalization contracts, using synthetic data without downloads or model imports."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import ModuleType
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -36,6 +39,47 @@ def sample_bundle(episode_count=4):
 
 
 class PreparationTests(unittest.TestCase):
+    def test_source_manifest_reuses_pinned_data_and_repairs_stale_or_modified_files(self):
+        from roboops.download import DATASET_FILES, prepare_source
+        from roboops.schema import DATASET_REVISION
+
+        cache = ROOT / ".cache/test-runs"
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache) as directory:
+            fixture = Path(directory)
+            source = fixture / "source"
+            cached = fixture / "downloaded-file"
+            cached.write_bytes(b"pinned dataset content")
+            hub = ModuleType("huggingface_hub")
+            hub.hf_hub_download = Mock(return_value=str(cached))
+            with patch.dict("sys.modules", {"huggingface_hub": hub}):
+                prepare_source(source)
+                self.assertEqual(hub.hf_hub_download.call_count, len(DATASET_FILES))
+                self.assertFalse((source / ".cache").exists())
+                for call in hub.hf_hub_download.call_args_list:
+                    self.assertEqual(call.kwargs["revision"], DATASET_REVISION)
+                    self.assertNotIn("local_dir", call.kwargs)
+                hub.hf_hub_download.reset_mock()
+                prepare_source(source)
+                hub.hf_hub_download.assert_not_called()
+                for stale in ("content", "revision", "missing"):
+                    with self.subTest(stale=stale):
+                        manifest_path = source / "source.json"
+                        if stale == "content":
+                            (source / DATASET_FILES[0]).write_bytes(b"changed")
+                        elif stale == "revision":
+                            manifest = json.loads(manifest_path.read_text())
+                            manifest["dataset_revision"] = "different-revision"
+                            manifest_path.write_text(json.dumps(manifest))
+                        else:
+                            (source / DATASET_FILES[0]).unlink()
+                        hub.hf_hub_download.reset_mock()
+                        prepare_source(source)
+                        self.assertEqual(hub.hf_hub_download.call_count, len(DATASET_FILES))
+                        self.assertEqual(
+                            (source / DATASET_FILES[0]).read_bytes(), cached.read_bytes()
+                        )
+
     def test_episode_split_is_deterministic_and_statistics_exclude_validation(self):
         bundle = sample_bundle()
         training, validation = split_episode_indices(bundle, 0.25, 42)

@@ -39,7 +39,7 @@ def run_evaluation(config: dict[str, Any], *, save_video: bool = False) -> dict[
     if not checkpoint_dir.exists():
         raise FileNotFoundError(
             f"Checkpoint not found: {checkpoint_dir}. "
-            "Run: python src/train.py --config configs/train_ci.yaml"
+            "Run: python -m roboops train --config configs/train_ci.yaml"
         )
     policy = ACTPolicy.from_pretrained(checkpoint_dir)
     policy.eval()

@@ -273,7 +273,7 @@ function Invoke-GazeboCases {
 
 function Invoke-OutputCleanup {
     param([switch]$CheckOnly)
-    $arguments = @((Join-Path (Get-GazeboRoot) 'scripts/maintenance/archive_outputs.py'))
+    $arguments = @((Join-Path (Get-GazeboRoot) 'scripts/archive_outputs.py'))
     if (-not $CheckOnly) { $arguments += '--apply' }
     & python @arguments
     if ($LASTEXITCODE -ne 0) { throw "Output cleanup failed (exit $LASTEXITCODE)." }
@@ -288,7 +288,7 @@ function Invoke-ExtensionTests {
     } finally { Pop-Location }
     $shell = @('pwsh','pwsh.exe','powershell.exe') | ForEach-Object { Join-Path $PSHOME $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if (-not $shell) { throw 'Cannot locate PowerShell for isolated command tests.' }
-    & $shell -NoProfile -File (Join-Path $script:RepositoryRoot 'tests/powershell/Test-Project.ps1')
+    & $shell -NoProfile -File (Join-Path $script:RepositoryRoot 'tests/Test-Project.ps1')
     if ($LASTEXITCODE -ne 0) { throw "PowerShell checks failed (exit $LASTEXITCODE)." }
 }
 

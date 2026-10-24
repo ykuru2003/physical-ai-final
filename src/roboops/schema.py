@@ -13,4 +13,4 @@ EXPECTED_SHAPES = {AGENT_STATE_KEY: (2,), ENVIRONMENT_STATE_KEY: (16,), ACTION_K
 DATASET_ID = "lerobot/pusht_keypoints"
 DATASET_REVISION = "ace8c161a68bc025c21a5f29f85b86a9a2c5e64b"
 DEFAULT_DATA = Path("data/processed/pusht_keypoints.npz")
-DEFAULT_RAW_ROOT = Path("data/raw/lerobot_pusht_keypoints") / DATASET_REVISION
+DEFAULT_RAW_ROOT = Path("data/source")

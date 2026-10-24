@@ -11,12 +11,10 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = (
     'tests.test_archive_outputs',
-    'tests.test_entrypoints',
     'tests.test_legacy_driver_runtime',
     'tests.test_step2_evaluation',
     'tests.test_destination_control',
-    'tests.test_step2_offline',
-    'tests.test_step2_v4_offline',
+    'tests.offline_navigation',
 )
 
 
@@ -26,7 +24,6 @@ def main():
         compile(source.read_text(encoding='utf-8-sig'), str(source), 'exec')
     ET.parse(ROOT / 'simulation/worlds/practice.sdf')
     print('Python syntax and world XML: PASS', flush=True)
-    (ROOT / 'outputs').mkdir(exist_ok=True)
     for index, name in enumerate(CHECKS, 1):
         print(f'[{index}/{len(CHECKS)}] {name}', flush=True)
         subprocess.run([sys.executable, '-u', '-m', name],

@@ -67,24 +67,24 @@ GazeboとOllamaは、教材の起動・学習・PushT評価には必要ありま
 ## データ取得から評価まで
 
 Notebookは手順を学ぶために各処理を明示しています。
-同じ処理を繰り返す場合やCIでは、4つのPythonコマンドを使います。
+同じ処理を繰り返す場合やCIでは、共通のPythonコマンド `python -m roboops` の4つのサブコマンドを使います。
 すべてプロジェクト直下から実行します。
 
 ```powershell
 # 固定revisionから20エピソード分を取得・前処理する
-docker compose run --rm workshop python src/download_dataset.py --max-episodes 20
+docker compose run --rm workshop python -m roboops download --max-episodes 20
 
 # 必須項目、shape、値、エピソード長を確認する
-docker compose run --rm workshop python src/validate_dataset.py
+docker compose run --rm workshop python -m roboops validate
 
 # 教材・データ・モデルのテストを実行する
 .\project.ps1 Test
 
 # CI用の小さなACTを学習し、checkpointを保存する
-docker compose run --rm workshop python src/train.py --config configs/train_ci.yaml
+docker compose run --rm workshop python -m roboops train --config configs/train_ci.yaml
 
 # 保存したcheckpointを固定seedのPushT環境で評価する
-docker compose run --rm workshop python src/eval.py --config configs/eval_ci.yaml
+docker compose run --rm workshop python -m roboops evaluate --config configs/eval_ci.yaml
 ```
 
 - 取得元は `lerobot/pusht_keypoints`、revisionは `src/roboops/schema.py` で固定しています。
@@ -95,8 +95,9 @@ docker compose run --rm workshop python src/eval.py --config configs/eval_ci.yam
 
 `Test` のデータ検査には、先に処理済みデータの作成が必要です。
 学習条件と保存先は `configs/train_ci.yaml`、評価条件と合格基準は `configs/eval_ci.yaml` にあります。
-コマンドの引数は `python src/train.py --help` などで確認できます。
+コマンドの引数は `python -m roboops train --help` などで確認できます。
 ヘルプだけならTorch・LeRobot・Gym・ROSは読み込みません。
+ローカルPythonから直接呼ぶ場合は、プロジェクト直下で `$env:PYTHONPATH = (Resolve-Path src).Path` を設定します。
 
 ## 操作コマンド
 
@@ -149,22 +150,21 @@ physical-ai-final/
   pyproject.toml / uv.lock   教材の依存関係
   notebooks/                講義本編
   configs/                  学習・評価条件
-  src/
-    download_dataset.py     データ取得のコマンド
-    validate_dataset.py     データ検査のコマンド
-    train.py / eval.py       学習・評価のコマンド
-    roboops/                用途別の実装
+  src/roboops/
+    __main__.py             データ取得・検査・学習・評価の共通入口
+    *.py                    用途別の実装
   tests/
     test_*.py               教材と構成の検査
-    powershell/Test-Project.ps1  操作コマンドの統合検査
-    support/                一時ディレクトリ内で検査する共通処理
+    Test-Project.ps1        操作コマンドの統合検査
+    run_powershell.py        検査用一時ディレクトリの管理
   extensions/gazebo/
     compose.yaml            Gazebo専用の実行環境
     docker/                 ROS・Gazeboイメージと起動処理
     simulation/             ワールド・センサー・ROSブリッジ
     scripts/                AI選択・走行・実位置評価・Python検査
     outputs/                現在の検証記録と最新ログ
-  data/                     教材データ（Git対象外）
+  data/source/              固定revisionの元データと取得記録
+  data/processed/           学習に使うNPZ（どちらもGit対象外）
   artifacts/                モデル・評価結果・動画（Git対象外）
   .cache/test-runs/          テスト中の一時データ
   work/archive/             過去の作業記録の復元用ZIP
@@ -172,14 +172,17 @@ physical-ai-final/
 
 実行環境は教材とGazeboで異なるため、ComposeとDockerfileはそれぞれにあります。
 ビルドの除外設定と環境変数は共用し、操作・テスト・説明・Git設定を重複して置きません。
+GazeboのPython実装は `extensions/gazebo/scripts/` に直接置き、中継だけのファイルや細かな実装用サブフォルダは作りません。
+v3は旧走行試験、v4は比較用、v5は現在の走行処理に使うため残しています。
 
 ## 変更する場所とデータの流れ
 
-最初はNotebookで入出力を確認し、`src/train.py` または `src/eval.py` から実装へ進むと追いやすくなります。
+最初はNotebookで入出力を確認し、`src/roboops/__main__.py` から `training.py` または `evaluation.py` へ進むと追いやすくなります。
 既存の責務に含まれる処理は、そのモジュールへ追加します。操作入口や設定ファイルを機能ごとに増やす必要はありません。
 
 `src/roboops/` の役割：
 
+- `__main__.py`：サブコマンドの引数と処理の呼び出し。
 - `schema.py`：フィールド名・次元・固定データセット・既定の保存先。
 - `download.py`：取得、キャッシュ確認、NPZへの変換。
 - `validation.py`：順序付きの `Check(label, passed, detail)` を返すデータ検査。
@@ -228,7 +231,7 @@ Gazebo側のオフライン検査は `project.ps1 TestExtension` です。
 操作コマンドの検査だけなら、次を実行できます。
 
 ```powershell
-pwsh -NoProfile -File tests/powershell/Test-Project.ps1
+pwsh -NoProfile -File tests/Test-Project.ps1
 ```
 
 操作コマンドの検査はDocker・Python・Ollamaの業務処理を模擬します。
@@ -292,11 +295,13 @@ try {
 
 ## 出力と一時ファイル
 
-- `data/`：取得した教材データ。
+- `data/source/`：固定revisionの元データ。`source.json` にrevisionとファイルのSHA-256を記録します。
+- `data/processed/`：学習・検査用に変換したNPZと取得条件。
+- ダウンロードのキャッシュはHugging Face標準の場所（Dockerでは専用ボリューム）に保存し、`data/` へ混ぜません。
 - `artifacts/`：学習済みモデル・評価結果・動画。
-- `extensions/gazebo/outputs/`：現在の検証記録と最新ログ。`offline/` は更新されるテスト結果です。
+- `extensions/gazebo/outputs/`：現在の検証記録と最新ログ。
 - `.cache/test-runs/`：本体のテスト用一時データ。終了時に片付けます。
-- `extensions/gazebo/.cache/test-runs/`：拡張のPythonテスト用一時データ。
+- `extensions/gazebo/.cache/`：拡張のテスト用一時データと、再生成できる `offline/` の検査結果。
 - `work/archive/` と拡張内の `work/archive/`：復元用の過去ログ・作業記録のZIP。
 
 古いGazeboログは `project.ps1 Clean -CheckOnly` で候補を確認し、`project.ps1 Clean` で整理します。

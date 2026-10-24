@@ -52,7 +52,7 @@ def load_npz_dataset(path: str | Path) -> DatasetBundle:
     dataset_path = Path(path)
     if not dataset_path.exists():
         raise FileNotFoundError(
-            f"Dataset not found: {dataset_path}. Run: python src/download_dataset.py"
+            f"Dataset not found: {dataset_path}. Run: python -m roboops download"
         )
     with np.load(dataset_path, allow_pickle=False) as values:
         missing = [key for key in REQUIRED_KEYS if key not in values.files]

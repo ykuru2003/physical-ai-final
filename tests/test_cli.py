@@ -27,26 +27,26 @@ class CommandHelpTests(unittest.TestCase):
                         "roboops.evaluation": evaluation,
                     },
                 ),
-                patch.object(sys, "argv", ["eval.py", "--save-video"]),
+                patch.object(sys, "argv", ["roboops", "evaluate", "--save-video"]),
             ):
                 if result == "FAIL":
                     with self.assertRaises(SystemExit) as error:
-                        runpy.run_path(str(ROOT / "src/eval.py"), run_name="__main__")
+                        runpy.run_module("roboops", run_name="__main__")
                     self.assertEqual(error.exception.code, 1)
                 else:
-                    runpy.run_path(str(ROOT / "src/eval.py"), run_name="__main__")
+                    runpy.run_module("roboops", run_name="__main__")
                 evaluation.run_evaluation.assert_called_once_with(
                     {"test": "configuration"}, save_video=True
                 )
 
     def test_help_does_not_load_optional_runtime_packages(self):
-        for name in ("download_dataset.py", "validate_dataset.py", "train.py", "eval.py"):
+        for name in ("download", "validate", "train", "evaluate"):
             with self.subTest(command=name):
                 code = (
                     "import runpy,sys; from pathlib import Path; "
                     "sys.path.insert(0,str(Path('src').resolve())); "
-                    f"sys.argv=['{name}','--help']; "
-                    "\ntry: runpy.run_path('src/'+sys.argv[0],run_name='__main__')"
+                    f"sys.argv=['roboops','{name}','--help']; "
+                    "\ntry: runpy.run_module('roboops',run_name='__main__')"
                     "\nexcept SystemExit as error: assert error.code==0"
                     "\nassert not any(n in sys.modules for n in ('torch','lerobot','gymnasium','rclpy'))"
                 )

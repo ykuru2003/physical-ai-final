@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from maintenance import archive_outputs as cleanup
+import archive_outputs as cleanup
 
 
 class ArchiveTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class ArchiveTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         (self.root / 'scripts').mkdir()
-        (self.root / 'outputs/offline').mkdir(parents=True)
+        (self.root / '.cache/offline').mkdir(parents=True)
         (self.root / 'outputs/step2-evaluation/qualified').mkdir(parents=True)
         self.registry = self.root / 'scripts/destinations.json'
         self.registry.write_text(json.dumps({'destinations': [{'qualification': {'reports': [
@@ -30,7 +30,7 @@ class ArchiveTests(unittest.TestCase):
         self.current.write_bytes(b'current certificate')
         self.old = self.root / 'outputs/old.log'
         self.old.write_bytes(b'old log\x00\xff')
-        (self.root / 'outputs/offline/latest.json').write_text('{}', encoding='utf-8')
+        (self.root / '.cache/offline/latest.json').write_text('{}', encoding='utf-8')
 
     def test_preview_preserves_evidence_certificates_and_latest_results_without_writes(self):
         before = sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*'))
