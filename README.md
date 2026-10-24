@@ -41,7 +41,7 @@ cd physical-ai-final
 Docker Desktopを起動し、Engineが動くまで待ってから、プロジェクトのPowerShellで実行します。
 
 ```powershell
-docker compose up -d --build simulator
+.\project.ps1 Start
 ```
 
 初回のビルドにはROS・Gazeboなどのダウンロードが必要です。
@@ -74,7 +74,7 @@ ollama pull qwen3:1.7b
 他の走行プログラムを終了した状態で、プロジェクトのPowerShellから実行します。
 
 ```powershell
-.\verify-step3.ps1
+.\project.ps1 Verify
 ```
 
 この処理はモデル名と文字コードを設定し、現在の構成と一致する過去の合格記録を再利用します。
@@ -153,24 +153,86 @@ Python 3.12のUbuntu環境を1つ使い、ジョブの上限は5分、同じブ�
 GitHub Actionsの利用枠はアカウントの契約・使用状況に従います。
 
 検査する内容は、Python構文、ワールドXML、安全制御、実位置の評価判定、v3・v4の簡易走行です。
+加えて、PowerShellの13件の検査で、パス・引数の引き渡し・ロック・失敗時の伝達・ファイル復元を確認します。DockerとPythonの呼び出しは模擬し、実際のサービスを起動しません。
 **GitHub上のPASSは、Gazeboの実走行や実AIの再検証が成功したという意味ではありません。**
 実走行と実AIは、上記のローカルでの全体確認で検証します。
 
-同じオフライン検査をPCで実行するには、次を使います。
+PythonとPowerShellのオフライン検査をまとめてPCで実行するには、次を使います。
 
 ```powershell
-python scripts/run_offline_checks.py
+.\project.ps1 Test
 ```
 
 GitHubのリポジトリでActionsを開き、`Offline tests` の実行結果を確認できます。
+
+## フォルダ構成とPowerShellの入口
+
+普段はルートの `project.ps1` を使います。引数なし、または `Help` で操作一覧が表示され、走行は始まりません。
+
+```powershell
+.\project.ps1 Help
+```
+
+- `Start` / `Stop` / `Status` / `Logs`：起動・終了・状態・ログ。
+- `Verify`：実AIから走行・停止までの全体確認。
+- `Test`：PythonとPowerShellのオフライン検査。実走行と実AIは起動しません。
+- `Evaluate`：v5による単一ゴールの実位置評価。`-Driver v4` なども指定できます。
+- `Cases`：障害物3配置の旧v3走行検証。検証後にワールドと元の記録を復元します。
+- `Check` / `Demo` / `RunStep2`：通信確認、短いデモ、旧v3の単独走行。いずれもロボットが動きます。
+- `Workshop` / `Shell` / `Build` / `Validate`：教材起動、ROSターミナル、ビルド、Compose構成検査。
+
+走行を始めずに実位置評価や3配置検証の準備だけを確認するには、次を個別に使います。
+
+```powershell
+.\project.ps1 Evaluate -Driver v5 -GoalX 3 -GoalY 1 -CheckOnly
+.\project.ps1 Cases -CheckOnly
+```
+
+`-CheckOnly` は `Evaluate` と `Cases` だけに対応します。他の操作に付けた場合は、操作を始めずにエラーにします。
+PowerShellの検査だけを実行する場合は次を使います。Windows PowerShell 5.1とPowerShell 7で確認しています。
+
+```powershell
+powershell -NoProfile -File scripts/powershell/tests/Test-ProjectScripts.ps1
+```
+
+```text
+physical-ai-final/
+  project.ps1                 普段の操作をまとめた入口
+  verify-step3.ps1             以前のコマンドとの互換用の短い入口
+  README.md
+  compose.yaml
+  .github/workflows/           GitHubの自動テスト
+  scripts/
+    powershell/               PowerShellの実装本体と共通処理
+      Project.Common.ps1      プロジェクトの場所・同時走行の確認
+      manage.ps1
+      run-step2.ps1
+      evaluate-step2.ps1
+      verify-step3.ps1
+      test-step2-cases.ps1
+      tests/                  サービスを模擬するPowerShell検査
+    *.py                      AI・走行・評価・Python検査
+  simulation/                 ワールドとROSの設定
+  docker/                     コンテナの構築・起動
+  outputs/                    検証結果とログ
+  workshop/                   元の教材
+  work/                       Gitに含めない作業用ファイル
+    legacy-backups/           元の場所・ハッシュ記録付きの古いバックアップ
+```
+
+以前の `.\verify-step3.ps1` もそのまま使えます。
+その他の旧ルートスクリプトは `scripts/powershell/` に移しました。
+旧 `manage.ps1 Start` は `project.ps1 Start`、旧 `evaluate-step2.ps1` は `project.ps1 Evaluate`、
+旧 `test-step2-cases.ps1` は `project.ps1 Cases`、旧 `run-step2.ps1` は `project.ps1 RunStep2` に対応します。
+どの作業フォルダから呼び出しても、Composeやログはこのプロジェクトの場所を基準に処理します。
 
 ## 主なファイルとログ
 
 - `compose.yaml`、`docker/`：Docker環境の起動と構築。
 - `simulation/worlds/practice.sdf`：ロボット、センサー、障害物の配置。
 - `simulation/config/bridge.yaml`：ROSとGazebo間の通信設定。
-- `evaluate-step2.ps1`、`scripts/evaluate_step2.py`：実位置による独立評価。
-- `verify-step3.ps1`、`scripts/complete_step3.py`：日本語からの走行までの一括検証。
+- `scripts/powershell/evaluate-step2.ps1`、`scripts/evaluate_step2.py`：実位置による独立評価。
+- `scripts/powershell/verify-step3.ps1`、`scripts/complete_step3.py`：日本語からの走行までの一括検証。
 - `scripts/stop_step2.py`：ゼロ速度の送信と、受信した速度による停止確認。
 - `scripts/test_*.py`、`scripts/run_offline_checks.py`：オフライン検査。
 - `outputs/language-goals/`：入力、AIの判断、走行結果、停止確認。
@@ -183,12 +245,12 @@ GitHubのリポジトリでActionsを開き、`Offline tests` の実行結果を
 ## 終了・再起動
 
 ```powershell
-docker compose stop simulator
-docker compose restart simulator
-docker compose logs --tail 100 simulator
+.\project.ps1 Stop
+.\project.ps1 Start
+.\project.ps1 Logs
 ```
 
-`restart` でロボットは原点へ戻ります。Ollamaを手動で起動したPowerShellでは、Ctrl+Cで終了できます。
+`Stop` はシミュレータと教材のコンテナを終了します。`Start` で起動し直すとロボットは原点へ戻ります。シミュレータだけを再起動する場合は `docker compose restart simulator` を使えます。Ollamaを手動で起動したPowerShellでは、Ctrl+Cで終了できます。
 
 ## GitHubに保存するもの
 

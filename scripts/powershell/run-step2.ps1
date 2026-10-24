@@ -1,7 +1,8 @@
-﻿# Run from PowerShell; only this project's simulator is restarted.
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $false
-Push-Location $PSScriptRoot
+# Run from PowerShell; only this project's simulator is restarted.
+. (Join-Path $PSScriptRoot 'Project.Common.ps1')
+$projectRoot = Get-PhysicalAiProjectRoot
+Assert-PhysicalAiIdle
+Push-Location $projectRoot
 try {
     New-Item -ItemType Directory -Path outputs -Force | Out-Null
     docker compose up -d --no-build simulator

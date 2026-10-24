@@ -1,18 +1,16 @@
 [CmdletBinding()]
 param([switch]$CheckOnly, [ValidateSet('v3','v4','v5')][string]$Driver = 'v3', [double]$GoalX = 3.0, [double]$GoalY = 1.0)
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $false
-$world = [xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'simulation/worlds/practice.sdf') -Raw)
+. (Join-Path $PSScriptRoot 'Project.Common.ps1')
+$projectRoot = Get-PhysicalAiProjectRoot
+$world = [xml](Get-Content -LiteralPath (Join-Path $projectRoot 'simulation/worlds/practice.sdf') -Raw)
 if ($null -eq $world.SelectSingleNode('/sdf/world/model[@name="practice_robot"]/plugin[@name="gz::sim::systems::PosePublisher"]')) { throw 'Ground-truth pose publisher is missing' }
-if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "scripts/drive_to_goal_$Driver.py"))) { throw "Driver file missing: $Driver" }
+if (-not (Test-Path -LiteralPath (Join-Path $projectRoot "scripts/drive_to_goal_$Driver.py"))) { throw "Driver file missing: $Driver" }
 if ($CheckOnly) { Write-Host "CHECK PASSED: world-position evaluation configured for $Driver. No simulation was started."; return }
-foreach ($name in @('step2-autotest.request','step2-autotest.running','navigation.lock')) {
-    if (Test-Path -LiteralPath (Join-Path $PSScriptRoot "outputs/$name")) { throw "Automatic test pending/running: $name" }
-}
+Assert-PhysicalAiIdle
 $runId = $Driver+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
-$outputDir = Join-Path $PSScriptRoot "outputs/step2-evaluation/$runId"
+$outputDir = Join-Path $projectRoot "outputs/step2-evaluation/$runId"
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-Push-Location $PSScriptRoot
+Push-Location $projectRoot
 try {
     docker compose up -d --no-build simulator
     if ($LASTEXITCODE -ne 0) { throw 'Cannot start simulator' }

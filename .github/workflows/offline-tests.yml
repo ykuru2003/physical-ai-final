@@ -31,3 +31,6 @@ jobs:
         env:
           PYTHONUTF8: '1'
         run: python scripts/run_offline_checks.py
+      - name: Check PowerShell entry points and recovery with mocked services
+        shell: pwsh
+        run: ./scripts/powershell/tests/Test-ProjectScripts.ps1

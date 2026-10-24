@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param([switch]$CheckOnly)
 
-$ErrorActionPreference = 'Stop'
-$PSNativeCommandUseErrorActionPreference = $false
-$worldPath = Join-Path $PSScriptRoot 'simulation/worlds/practice.sdf'
+. (Join-Path $PSScriptRoot 'Project.Common.ps1')
+$projectRoot = Get-PhysicalAiProjectRoot
+$worldPath = Join-Path $projectRoot 'simulation/worlds/practice.sdf'
 $originalBytes = [IO.File]::ReadAllBytes($worldPath)
 $originalText = [IO.File]::ReadAllText($worldPath)
 $cases = @(
@@ -21,11 +21,9 @@ foreach ($case in $cases) {
     Write-Host ($case.Name + ': obstacle pose = ' + $case.Pose)
 }
 if ($CheckOnly) { Write-Host 'CHECK PASSED: 3 valid worlds; no Docker commands or file changes.'; return }
-foreach ($name in @('step2-autotest.request', 'step2-autotest.running')) {
-    if (Test-Path -LiteralPath (Join-Path $PSScriptRoot "outputs/$name")) { throw "Another automatic test is pending/running: $name" }
-}
+Assert-PhysicalAiIdle
 
-$session = Join-Path $PSScriptRoot ('outputs/step2-cases/' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,6))
+$session = Join-Path $projectRoot ('outputs/step2-cases/' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,6))
 $previous = Join-Path $session 'previous'
 New-Item -ItemType Directory -Path $previous -Force | Out-Null
 [IO.File]::WriteAllBytes((Join-Path $session 'practice.before-tests.sdf'), $originalBytes)
@@ -34,11 +32,11 @@ $results = [System.Collections.Generic.List[object]]::new()
 $allPassed = $true
 $worldChanged = $false
 $cleanupError = $null
-Push-Location $PSScriptRoot
+Push-Location $projectRoot
 try {
     # Preserve the existing verified run; suite results live in their own folders.
     foreach ($name in $artifacts) {
-        $source = Join-Path $PSScriptRoot "outputs/$name"
+        $source = Join-Path $projectRoot "outputs/$name"
         if (Test-Path -LiteralPath $source) { Move-Item -LiteralPath $source -Destination (Join-Path $previous $name) }
     }
     foreach ($case in $cases) {
@@ -52,7 +50,7 @@ try {
             [IO.File]::WriteAllText((Join-Path $caseDir 'practice.sdf'), $candidate, [Text.UTF8Encoding]::new($false))
             Write-Host "RUNNING $($case.Name)"
             & (Join-Path $PSScriptRoot 'run-step2.ps1')
-            $run = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'outputs/step2-run.json') -Raw | ConvertFrom-Json
+            $run = Get-Content -LiteralPath (Join-Path $projectRoot 'outputs/step2-run.json') -Raw | ConvertFrom-Json
             if ($run.result -ne 'GOAL REACHED!') { throw "Driver result: $($run.result)" }
             if (@($run.obstacle_collisions).Count -ne 0) { throw 'Obstacle collision detected' }
             $record.final_odometry = $run.final_pose
@@ -68,7 +66,7 @@ try {
             Write-Warning "$($case.Name): $($record.reason)"
         } finally {
             foreach ($name in $artifacts) {
-                $source = Join-Path $PSScriptRoot "outputs/$name"
+                $source = Join-Path $projectRoot "outputs/$name"
                 if (Test-Path -LiteralPath $source) { Move-Item -LiteralPath $source -Destination (Join-Path $caseDir $name) }
             }
             $results.Add([pscustomobject]$record)
@@ -81,7 +79,7 @@ try {
         [IO.File]::WriteAllBytes($worldPath, $originalBytes)
         foreach ($name in $artifacts) {
             $source = Join-Path $previous $name
-            if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination (Join-Path $PSScriptRoot "outputs/$name") -Force }
+            if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination (Join-Path $projectRoot "outputs/$name") -Force }
         }
         if ($worldChanged) {
             docker compose restart simulator

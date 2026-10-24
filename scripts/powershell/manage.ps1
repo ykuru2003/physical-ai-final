@@ -2,8 +2,9 @@ param(
     [ValidateSet('Start', 'Stop', 'Status', 'Check', 'Demo', 'Workshop', 'Shell', 'Logs', 'Build', 'Validate')]
     [string]$Action = 'Start'
 )
-$ErrorActionPreference = 'Stop'
-Push-Location $PSScriptRoot
+. (Join-Path $PSScriptRoot 'Project.Common.ps1')
+$projectRoot = Get-PhysicalAiProjectRoot
+Push-Location $projectRoot
 try {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'Docker Desktop is required. Install it and enable Linux containers.'
@@ -32,7 +33,7 @@ try {
         $config = (& docker compose config --format json | Out-String) | ConvertFrom-Json
         $port = ($config.services.simulator.ports | Where-Object target -eq 6080).published
         Write-Host "Gazebo: http://localhost:$port/vnc.html?autoconnect=true&resize=scale"
-        Write-Host 'Wait for the desktop, then run: .\manage.ps1 Check'
+        Write-Host 'Wait for the desktop, then run: .\project.ps1 Check'
     }
     if ($Action -eq 'Workshop') {
         $config = (& docker compose --profile workshop config --format json | Out-String) | ConvertFrom-Json
