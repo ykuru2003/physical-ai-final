@@ -8,12 +8,36 @@
         3.0,
         1.0
       ],
-      "state": "pending_current_runtime_qualification",
+      "state": "qualified",
       "note": "Historical navigation PASS logs preserved. Requalify after integration changes before language-driven execution.",
       "revalidation_reason": "Renamed navigation commands, ROS topics and output paths require fresh runtime evidence.",
       "historical_evidence": {
         "archive": "../work/gazebo-history.zip",
         "registry": "before-role-names/gazebo/scripts/destinations.json"
+      },
+      "qualification": {
+        "fingerprint": {
+          "simulation/config/bridge.yaml": "b9a1d3586152720d8bcf8367be6b23d8a8732c9d624d7283145df208fe633b8f",
+          "simulation/launch/simulation.launch.py": "ff90a1f3807131621b209cbba9b95fdec6c7806839034ef98a9d483fc5962a93",
+          "simulation/worlds/practice.sdf": "b239fce6fbdae063e893064575de3d4e37ca7f9700c829b394d16bd9438883f3",
+          "scripts/navigate_to_goal.py": "a1a121d8c4d970139217fbf42f6e1266398b1b88b3e07a65217ec0746baca9b9",
+          "scripts/evaluate_navigation.py": "806bba79d5bf5302ea4281ccf730ddbc14bda3d616b7793f7d990ed421e3ec34"
+        },
+        "reports": [
+          {
+            "path": "outputs/world-evaluation/20261025-112152-5e18945c-east_station-1.json",
+            "sha256": "4249b7f9bc93e52370dc737db8aaabe09e3dbbf8b6e7aa45b31471a8500600d8"
+          },
+          {
+            "path": "outputs/world-evaluation/20261025-112152-5e18945c-east_station-2.json",
+            "sha256": "3a06b4b00b0882b7ac330397c6cee2724a458d6479a780e674e07ae1aafed0c3"
+          },
+          {
+            "path": "outputs/world-evaluation/20261025-112152-5e18945c-east_station-3.json",
+            "sha256": "4ae5173e71ec833424e13de424d0c92073e8c7a06a7a97acf5bd54dbf84d5b81"
+          }
+        ],
+        "provenance": "repeated_world_evaluation"
       }
     },
     {
