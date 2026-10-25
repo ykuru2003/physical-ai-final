@@ -1,4 +1,5 @@
 """Preservation and recovery contracts for local output archiving."""
+from tests import CACHE_ROOT
 import json
 from pathlib import Path
 import tempfile
@@ -11,7 +12,7 @@ import archive_outputs as cleanup
 
 class ArchiveTests(unittest.TestCase):
     def setUp(self):
-        fixture_root = (cleanup.ROOT / '.cache/test-runs').resolve()
+        fixture_root = (CACHE_ROOT / 'test-runs').resolve()
         fixture_root.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=fixture_root)
         assert Path(self.temp.name).resolve().is_relative_to(fixture_root)
@@ -105,6 +106,14 @@ class ArchiveTests(unittest.TestCase):
         with patch.object(Path, 'read_bytes', read), self.assertRaises(RuntimeError):
             cleanup.archive_files(self.root, [self.old])
         self.assertEqual(self.old.read_bytes(), b'new live data')
+
+    def test_submission_recording_video_and_audit_are_never_cleanup_inputs(self):
+        folder = self.root / 'outputs/recordings/submission-one'
+        (folder / 'audit').mkdir(parents=True)
+        (folder / 'submission.mp4').write_bytes(b'submission video')
+        (folder / 'audit/selection.json').write_text('{}', encoding='utf-8')
+        self.assertEqual(cleanup.plan_archive(self.root), [self.old])
+        self.assertEqual((folder / 'submission.mp4').read_bytes(), b'submission video')
 
     def test_work_is_opt_in_and_existing_archives_are_never_rearchived(self):
         work = self.root / 'work'

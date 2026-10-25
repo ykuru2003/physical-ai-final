@@ -13,7 +13,7 @@ import uuid
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACTIVE_MARKERS = ('navigation.lock', 'navigation-request.request', 'navigation-request.running')
+ACTIVE_MARKERS = ('navigation.lock',)
 KEEP_OUTPUTS = (
     'local-ai-validation.json', 'navigation-verification.json',
     'navigation-run.json', 'navigation-run.log', 'navigation-verification.log',
@@ -77,6 +77,11 @@ def plan_archive(root, include_work=False):
     root = root.resolve()
     assert_idle(root)
     keep = evidence_paths(root)
+    # Submission recordings and historical evidence are retained, not cleanup inputs.
+    for name in ('recordings', 'submission-check', 'historical'):
+        folder = root / 'outputs' / name
+        if folder.exists():
+            keep.update(p.resolve() for p in folder.rglob('*') if p.is_file())
     sources = []
     for path in sorted((root / 'outputs').rglob('*')):
         if not path.is_file():

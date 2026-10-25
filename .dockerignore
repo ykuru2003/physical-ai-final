@@ -4,16 +4,11 @@
 .env.*
 .DS_Store
 .venv
-.uv-cache
-src
-checkpoints
-evaluation
 outputs
 work
 **/__pycache__
 **/.pytest_cache
 **/.ruff_cache
-**/.ipynb_checkpoints
 *.pyc
 
 .cache

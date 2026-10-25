@@ -1,4 +1,4 @@
-# One PowerShell suite for workshop and simulator commands. All services are mocked.
+# Simulator command contracts. All services are mocked.
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -19,11 +19,12 @@ if (-not $global:PhysicalAiTestFixtureRoot.StartsWith($cacheBoundary, [StringCom
 }
 New-Item -ItemType Directory -Path (Join-Path $global:PhysicalAiTestFixtureRoot 'scripts') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'project.ps1') -Destination $repositoryFixtureRoot
+Copy-Item -LiteralPath (Join-Path $root 'gazebo/scripts/project_commands.ps1') -Destination (Join-Path $global:PhysicalAiTestFixtureRoot 'scripts/project_commands.ps1')
 $worldDir = Join-Path $global:PhysicalAiTestFixtureRoot 'simulation/worlds'
 New-Item -ItemType Directory -Path $worldDir -Force | Out-Null
 $worldPath = Join-Path $worldDir 'practice.sdf'
 Copy-Item -LiteralPath (Join-Path $root 'gazebo/simulation/worlds/practice.sdf') -Destination $worldPath
-foreach ($name in @('reference_navigation.py','navigate_to_goal.py')) {
+foreach ($name in @('navigate_to_goal.py')) {
     Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot "scripts/$name") -Value '# fixture only'
 }
 New-Item -ItemType Directory -Path (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs') -Force | Out-Null
@@ -56,7 +57,7 @@ function global:docker {
     $command = $arguments -join ' '
     if ($command -eq 'info --format {{.OSType}}') { Write-Output 'linux'; return }
     if ($command -match 'config --format json') {
-        Write-Output '{"services":{"simulator":{"ports":[{"target":6080,"published":6080}]},"workshop":{"ports":[{"target":8888,"published":8888}]}}}'
+        Write-Output '{"services":{"simulator":{"ports":[{"target":6080,"published":6080}]}}}'
         return
     }
     if ($global:PhysicalAiTestFailReadiness -and $command -match 'wait_for_sensors.py') {
@@ -64,10 +65,7 @@ function global:docker {
         $global:LASTEXITCODE = 1
         return
     }
-    if ($command -match 'reference_navigation.py') {
-        $report = @{ result='GOAL REACHED!'; obstacle_collisions=@(); final_pose=@(3,1,0); support_contact_count=20; trace=@(@{clearance=0.5}) }
-        $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json') -Encoding UTF8
-    }
+
 }
 function global:python {
     $global:PhysicalAiTestPythonCalls.Add([pscustomobject]@{ Arguments=@($args); Directory=(Get-Location).Path })
@@ -81,7 +79,7 @@ $originalDirectory = (Get-Location).Path
 Push-Location $PSScriptRoot
 try {
     Test-Case 'All project PowerShell sources parse' {
-        $sources = @(Get-Item -LiteralPath (Join-Path $root 'project.ps1'), $PSCommandPath)
+        $sources = @(Get-Item -LiteralPath (Join-Path $root 'project.ps1'), (Join-Path $root 'gazebo/scripts/project_commands.ps1'), $PSCommandPath)
         foreach ($source in $sources) {
             $tokens = $null; $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile($source.FullName, [ref]$tokens, [ref]$errors) | Out-Null
@@ -91,31 +89,25 @@ try {
     Test-Case 'Help does not contact services' {
         $global:PhysicalAiTestDockerCalls.Clear(); $global:PhysicalAiTestPythonCalls.Clear()
         $help = & $launcher Help | Out-String
-        Assert-True ($help -match 'Verify' -and $help -match 'Test' -and $help -match 'JupyterLab') 'Help omitted primary commands.'
+        Assert-True ($help -match 'Verify' -and $help -match 'Test' -and $help -match 'Record') 'Help omitted primary commands.'
         Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0 -and $global:PhysicalAiTestPythonCalls.Count -eq 0) 'Help started a service.'
     }
     Test-Case 'Evaluate forwards parameters from an unrelated working directory' {
         $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $output = & $launcher Evaluate -Driver navigation -GoalX 1 -GoalY -1 -CheckOnly 6>&1 | Out-String
-        Assert-True ($output -match 'configured for navigation') 'Driver parameter was not forwarded.'
+        $output = & $launcher Evaluate -GoalX 1 -GoalY -1 -CheckOnly 6>&1 | Out-String
+        Assert-True ($output -match 'configured for navigation') 'Navigation preview was not returned.'
         Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'CheckOnly changed the world.'
         Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0) 'CheckOnly called Docker.'
-    }
-    Test-Case 'Case CheckOnly validates geometry without moving files or calling services' {
-        $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        & $launcher Cases -CheckOnly | Out-Null
-        Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'Case CheckOnly changed the world.'
-        Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0) 'Case CheckOnly called Docker.'
     }
     Test-Case 'Unsupported CheckOnly cannot start navigation' {
         Assert-Fails { & $launcher Verify -CheckOnly } 'supported only'
         Assert-True ($global:PhysicalAiTestPythonCalls.Count -eq 0) 'Unsupported CheckOnly launched Python.'
     }
-    Test-Case 'Navigation lock stops evaluate, cases and reference runs before Docker' {
+    Test-Case 'Navigation lock stops evaluation before Docker' {
         $lock = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation.lock'
         Set-Content -LiteralPath $lock -Value 'test fixture'
         try {
-            foreach ($action in @('Evaluate','Cases','RunReference')) {
+            foreach ($action in @('Evaluate')) {
                 Assert-Fails { & $launcher $action } 'navigation.lock'
             }
             Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0) 'Locked navigation called Docker.'
@@ -123,19 +115,19 @@ try {
     }
     Test-Case 'Management commands use the compose project directory and restore location' {
         $before = (Get-Location).Path
-        & $launcher Validate | Out-Null
+        & $launcher Status | Out-Null
         Assert-True ($global:PhysicalAiTestDockerCalls[-1].Directory -eq $global:PhysicalAiTestFixtureRoot) 'Compose used the caller directory.'
         Assert-True ((Get-Location).Path -eq $before) 'Management command leaked its working directory.'
     }
     Test-Case 'Evaluate forwards goal coordinates and executes in the project directory' {
-        & $launcher Evaluate -Driver navigation -GoalX 1 -GoalY -1 | Out-Null
+        & $launcher Evaluate -GoalX 1 -GoalY -1 | Out-Null
         $call = $global:PhysicalAiTestDockerCalls[-1]
         $command = $call.Arguments -join ' '
-        Assert-True ($command -match '--driver navigation --goal-x 1 --goal-y -1') 'Evaluate dropped the goal coordinates.'
+        Assert-True ($command -match '--goal-x 1 --goal-y -1') 'Evaluate dropped the goal coordinates.'
         Assert-True ($call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Evaluate used the wrong compose directory.'
     }
     Test-Case 'Verify dispatches the installed small model and saves the latest log' {
-        & $launcher Verify | Out-Null
+        & $launcher Verify -Model qwen3:1.7b | Out-Null
         $call = $global:PhysicalAiTestPythonCalls[-1]
         Assert-True (($call.Arguments -join ' ') -match 'verify_navigation.py --model qwen3:1.7b') 'Verify used the wrong model or entry point.'
         Assert-True ($call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Verify used the wrong directory.'
@@ -147,32 +139,8 @@ try {
             Assert-Fails { & $launcher Verify } 'exit 7'
             $log = Get-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-verification.log') -Raw
             Assert-True ($log -match 'VERIFICATION INCOMPLETE') 'Verification failure was missing from the log.'
-            Assert-Fails { & $launcher TestExtension } 'exit 7'
+            Assert-Fails { & $launcher Test } 'exit 7'
         } finally { $global:PhysicalAiTestPythonExit = 0 }
-    }
-    Test-Case 'Failed reference case suite restores original world and previous run evidence' {
-        $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json'
-        Set-Content -LiteralPath $reportPath -Value '{"original":true}' -Encoding UTF8
-        $reportBefore = (Get-FileHash -LiteralPath $reportPath).Hash
-        $global:PhysicalAiTestFailReadiness = $true
-        try { Assert-Fails { & $launcher Cases } 'Some cases failed' } finally { $global:PhysicalAiTestFailReadiness = $false }
-        Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'Failed suite did not restore the original world bytes.'
-        Assert-True ((Get-FileHash -LiteralPath $reportPath).Hash -eq $reportBefore) 'Failed suite replaced existing run evidence.'
-    }
-    Test-Case 'Successful reference case suite restores original world and run evidence' {
-        $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json'
-        $reportBefore = (Get-FileHash -LiteralPath $reportPath).Hash
-        $sessionRoot = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/obstacle-cases'
-        $previousSessions = @(Get-ChildItem -LiteralPath $sessionRoot -Directory | Select-Object -ExpandProperty FullName)
-        & $launcher Cases | Out-Null
-        $newSession = @(Get-ChildItem -LiteralPath $sessionRoot -Directory | Where-Object { $_.FullName -notin $previousSessions })
-        Assert-True ($newSession.Count -eq 1) 'Case suite did not save one new session.'
-        $summary = Get-Content -LiteralPath (Join-Path $newSession[0].FullName 'summary.json') -Raw | ConvertFrom-Json
-        Assert-True ($summary.result -eq 'PASS' -and $summary.cases.Count -eq 3) 'Mock successful cases were not recorded as PASS.'
-        Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'Successful suite did not restore original world bytes.'
-        Assert-True ((Get-FileHash -LiteralPath $reportPath).Hash -eq $reportBefore) 'Successful suite replaced existing run evidence.'
     }
     Test-Case 'Clean preview and apply preserve argument boundaries and use the absolute script path' {
         & $launcher Clean -CheckOnly | Out-Null
@@ -187,49 +155,50 @@ try {
         $global:PhysicalAiTestPythonExit = 9
         try { Assert-Fails { & $launcher Clean } 'exit 9' } finally { $global:PhysicalAiTestPythonExit = 0 }
     }
-    Test-Case 'Start and Workshop launch only the main workshop' {
-        foreach ($action in @('Start','Workshop')) {
-            $before = (Get-Location).Path
-            & $launcher $action | Out-Null
-            $call = $global:PhysicalAiTestDockerCalls[-2]
-            Assert-True (($call.Arguments -join ' ') -eq 'compose up -d --build workshop') 'Start selected the simulator.'
-            Assert-True ($call.Directory -eq $repositoryFixtureRoot) 'Workshop used the wrong directory.'
-            Assert-True ((Get-Location).Path -eq $before) 'Start leaked its directory.'
-        }
-    }
-    Test-Case 'Test runs workshop pytest' {
-        & $launcher Test | Out-Null
-        Assert-True (($global:PhysicalAiTestDockerCalls[-1].Arguments -join ' ') -eq 'compose run --rm workshop pytest -q') 'Wrong workshop test command.'
-    }
-    Test-Case 'Stop targets the workshop Compose project' {
+    Test-Case 'Stop targets the submitted Gazebo Compose project' {
         & $launcher Stop | Out-Null
         $call = $global:PhysicalAiTestDockerCalls[-1]
-        Assert-True (($call.Arguments -join ' ') -eq 'compose down' -and $call.Directory -eq $repositoryFixtureRoot) 'Stop targeted the wrong project.'
+        Assert-True (($call.Arguments -join ' ') -match 'down$' -and $call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Stop targeted the wrong project.'
     }
-    Test-Case 'Simulator explicitly selects simulator service and project directory' {
-        & $launcher Simulator | Out-Null
-        $call = $global:PhysicalAiTestDockerCalls[-2]
-        Assert-True (($call.Arguments -join ' ') -match 'up -d --build simulator$') 'Simulator selected the wrong service.'
-        Assert-True ($call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Simulator used the wrong directory.'
-    }
-    Test-Case 'Simulator reads the shared root environment file' {
+    Test-Case 'Status reads the shared root environment file' {
         $environmentFile = Join-Path $repositoryFixtureRoot '.env'
-        Set-Content -LiteralPath $environmentFile -Value 'JUPYTER_PORT=8899'
-        & $launcher SimulatorStatus | Out-Null
+        Set-Content -LiteralPath $environmentFile -Value 'GAZEBO_WEB_PORT=6099'
+        & $launcher Status | Out-Null
         $arguments = $global:PhysicalAiTestDockerCalls[-1].Arguments
-        Assert-True ($arguments -contains '--env-file' -and $arguments -contains $environmentFile) 'Simulator ignored the root environment file.'
+        Assert-True ($arguments -contains '--env-file' -and $arguments -contains $environmentFile) 'Status ignored the root environment file.'
     }
-    Test-Case 'Unsupported simulator preview cannot dispatch commands' {
+    Test-Case 'Unsupported Start preview cannot dispatch commands' {
         $before = $global:PhysicalAiTestDockerCalls.Count
-        Assert-Fails { & $launcher Simulator -CheckOnly } 'supported only'
+        Assert-Fails { & $launcher Start -CheckOnly } 'supported only'
         Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq $before) 'Invalid preview called Docker.'
     }
-    Test-Case 'Workshop native errors propagate and restore the caller directory' {
-        $before = (Get-Location).Path
-        $global:PhysicalAiTestDockerExit = 7
-        try { Assert-Fails { & $launcher Build } 'exit 7' } finally { $global:PhysicalAiTestDockerExit = 0 }
-        Assert-True ((Get-Location).Path -eq $before) 'Workshop error leaked its directory.'
+    Test-Case 'Start selects the submitted simulator' {
+        & $launcher Start | Out-Null
+        Assert-True (($global:PhysicalAiTestDockerCalls[-2].Arguments -join ' ') -match 'up -d --build simulator$') 'Start did not select Gazebo.'
     }
+    Test-Case 'Run and Record preserve instruction arguments and preview semantics' {
+        $instruction = '東へ行って; echo should-not-run'
+        & $launcher Run -Instruction $instruction | Out-Null
+        $call = $global:PhysicalAiTestPythonCalls[-1].Arguments
+        Assert-True ($call -contains $instruction -and $call -contains '--execute') 'Run split or lost the instruction.'
+        & $launcher Record -CheckOnly | Out-Null
+        Assert-True ($global:PhysicalAiTestPythonCalls[-1].Arguments -notcontains '--run') 'Record preview started execution.'
+        & $launcher Record | Out-Null
+        Assert-True ($global:PhysicalAiTestPythonCalls[-1].Arguments -contains '--run') 'Record omitted execution.'
+    }
+    Test-Case 'A missing Python interpreter is not reported as an AI outage' {
+        Assert-Fails { & $launcher Verify -Python 'missing-physical-ai-python-executable' } 'Python 3.12'
+    }
+    Test-Case 'Removed commands cannot contact services' {
+        $beforeDocker = $global:PhysicalAiTestDockerCalls.Count
+        $beforePython = $global:PhysicalAiTestPythonCalls.Count
+        foreach ($removed in @('Workshop','Simulator','SimulatorStop','SimulatorStatus','SimulatorLogs','SimulatorShell','TestExtension','Check','Demo','RunReference','Cases')) {
+            Assert-Fails { & $launcher $removed } ([regex]::Escape($removed))
+        }
+        Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq $beforeDocker) 'Removed command called Docker.'
+        Assert-True ($global:PhysicalAiTestPythonCalls.Count -eq $beforePython) 'Removed command called Python.'
+    }
+
 } finally {
     Pop-Location
     Remove-Item Function:\docker, Function:\python, Function:\Invoke-RestMethod -ErrorAction SilentlyContinue

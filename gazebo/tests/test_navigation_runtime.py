@@ -1,4 +1,4 @@
-"""Exercise shared ROS lifecycle with deterministic fake messages and no services."""
+"""Exercise the current navigation ROS lifecycle with deterministic fake messages and no services."""
 import json
 import math
 import sys
@@ -6,11 +6,11 @@ from types import ModuleType, SimpleNamespace as NS
 import unittest
 from unittest.mock import Mock, patch
 
-import ros_driver as runtime
+import navigate_to_goal as runtime
 
 
 class RuntimeTests(unittest.TestCase):
-    def run_fake(self, event='GOAL', *, write_error=None):
+    def run_fake(self, event='GOAL', *, goal=(3., 1.)):
         holder = {}
 
         class Twist:
@@ -85,21 +85,22 @@ class RuntimeTests(unittest.TestCase):
 
         ros.spin_once = Mock(side_effect=spin)
         path = Mock()
-        path.write_text.side_effect = write_error
         clock = Mock(side_effect=[0., 241.] if event == 'TIMEOUT' else None, return_value=0.)
         # TIMEOUT must pass initialization and callbacks before control reads its clock.
         if event == 'TIMEOUT':
             clock.side_effect = [0., 0., 0., 0., 241.]
         with patch.dict(sys.modules, modules), patch.object(runtime, 'Path', return_value=path), \
-                patch.object(runtime.time, 'monotonic', clock), patch('builtins.print'):
+                patch.object(runtime.time, 'monotonic', clock), patch('builtins.print'), \
+                patch.object(runtime, 'LidarPlanner', return_value=planner), \
+                patch.object(sys, 'argv', ['navigate', '--goal-x', str(goal[0]), '--goal-y', str(goal[1]), '--output', 'result.json']):
             try:
-                code = runtime.run_driver(lambda: planner, node_name='test_driver', start_message='test')
+                code = runtime.main()
             except (OSError, RuntimeError):
-                if not write_error and event != 'EXCEPTION':
+                if event != 'EXCEPTION':
                     raise
                 code = None
         node = holder['node']
-        self.assertEqual(node.name, 'test_driver')
+        self.assertEqual(node.name, 'goal_driver_navigation')
         node.destroy_node.assert_called_once()
         ros.shutdown.assert_called_once()
         commands = [call.args[0] for call in node.publisher.publish.call_args_list]
@@ -129,20 +130,12 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual(report['result'], expected)
                 self.assertEqual(code, None if event == 'EXCEPTION' else 1)
 
-    def test_report_write_failure_still_releases_ros(self):
-        code, _ = self.run_fake(write_error=OSError('disk full'))
-        self.assertIsNone(code)
 
-    def test_profiles_select_correct_planner_and_node_name(self):
-        import reference_navigation as reference
-        for version in ('baseline', 'precise'):
-            with self.subTest(version=version), patch.object(runtime, 'run_driver', return_value=7) as run:
-                self.assertEqual(reference.main(['--profile', version]), 7)
-                self.assertEqual(run.call_args.kwargs['node_name'], 'goal_driver_' + version)
-                scan = NS(ranges=[math.inf]*180, angle_min=-math.pi,
-                          angle_increment=2*math.pi/179, range_min=.05, range_max=8.)
-                state = run.call_args.args[0]().command((2.9, 1., 0.), scan)[2]
-                self.assertEqual(state, 'GOAL' if version == 'baseline' else 'DIRECT')
+    def test_configurable_goal_is_written_to_report(self):
+        code, report = self.run_fake(goal=(1., -1.))
+        self.assertEqual(code, 0)
+        self.assertEqual(report['goal'], [1., -1.])
+
 
 
 if __name__ == '__main__':

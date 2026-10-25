@@ -10,18 +10,11 @@ class WorldEvaluationTests(unittest.TestCase):
     def score(self, actual=(2.9, 1.), odometry=(2.9, 1.), fresh=True, support=10, collisions=None):
         return score_run('GOAL REACHED!', 0, actual, odometry, fresh, support, collisions or [])
 
-    def test_driver_commands_use_canonical_executables(self):
-        for profile in ('baseline', 'precise'):
-            with self.subTest(profile=profile):
-                command = driver_command(profile, (3., 1.), 'result.json')
-                self.assertEqual(command[2:], [
-                    '/workspace/scripts/reference_navigation.py', '--profile', profile])
-        command = driver_command('navigation', (1., -1.), 'result.json')
+    def test_driver_command_uses_current_controller_and_requested_goal(self):
+        command = driver_command((1., -1.), 'result.json')
         self.assertEqual(command[2:], ['/workspace/scripts/navigate_to_goal.py',
                                      '--goal-x', '1.0', '--goal-y', '-1.0',
                                      '--output', 'result.json'])
-        with self.assertRaises(ValueError):
-            driver_command('invalid', (3., 1.), 'result.json')
 
     def test_odometry_success_can_be_world_failure(self):
         r = self.score(actual=(2.65, 1.17), odometry=(2.7584, 1.0458))

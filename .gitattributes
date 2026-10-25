@@ -6,9 +6,6 @@ Dockerfile text eol=lf
 *.sdf text eol=lf
 *.yaml text eol=lf
 *.ps1 text eol=crlf
-*.safetensors -text
-*.npz -text
-*.parquet -text
 *.mp4 -text
 *.yml text eol=lf
 

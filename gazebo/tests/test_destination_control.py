@@ -1,5 +1,5 @@
 """Offline safety/control tests. Model calls and Docker are simulated explicitly."""
-import ast
+from tests import CACHE_ROOT
 import copy
 from contextlib import nullcontext
 import sys
@@ -68,7 +68,7 @@ def valid_report(goal=(3., 1.)):
 class SafetyTests(unittest.TestCase):
     def setUp(self):
         self.registry = dc.load_registry()
-        cache = dc.ROOT / '.cache/test-runs'
+        cache = CACHE_ROOT / 'test-runs'
         cache.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=cache)
         self.addCleanup(self.temp.cleanup)
@@ -146,13 +146,13 @@ class SafetyTests(unittest.TestCase):
         for models in ([], [{'name': 'gpt-oss:20b', 'remote_host': 'example.com'}]):
             with patch.object(dc, 'local_request', return_value={'models': models}) as request:
                 with self.assertRaises(ValueError):
-                    dc.select_destination('東へ', self.registry)
+                    dc.select_destination('東へ', self.registry, model='gpt-oss:20b')
                 self.assertEqual(request.call_count, 1)
 
     def test_learned_inference_protocol_no_keyword_fallback(self):
         response = {'done': True, 'done_reason': 'stop', 'message': {'content': json.dumps(self.decision_body())}}
         with patch.object(dc, 'local_request', side_effect=[{'models': [{'name': 'gpt-oss:20b', 'digest': 'abc'}]}, GATE_TRAVEL, response]) as request:
-            selected = dc.select_destination('資材を渡すところに向かおう', self.registry)
+            selected = dc.select_destination('資材を渡すところに向かおう', self.registry, model='gpt-oss:20b')
         self.assertEqual(selected['destination_id'], 'east_station')
         self.assertEqual(request.call_args.args[1], '/api/chat')
         self.assertEqual(request.call_args.args[2]['messages'][-1]['content'], '資材を渡すところに向かおう')
@@ -183,7 +183,7 @@ class SafetyTests(unittest.TestCase):
     def test_truncated_inference_rejected(self):
         with patch.object(dc, 'local_request', side_effect=[{'models': [{'name': 'gpt-oss:20b'}]}, {'done': True, 'done_reason': 'length'}]):
             with self.assertRaises(ValueError):
-                dc.select_destination('東へ', self.registry)
+                dc.select_destination('東へ', self.registry, model='gpt-oss:20b')
 
     def test_unapproved_endpoints_or_ports_rejected(self):
         for port, endpoint in ((80, '/api/chat'), (11434, '/api/pull')):
@@ -198,7 +198,7 @@ class SafetyTests(unittest.TestCase):
         self.assertTrue(dc.report_passes(valid_report(), [3., 1.]))
         for values in ({'status': 'FAIL'}, {'goal': [2.,2.]}, {'obstacle_collisions': [['robot','obstacle']]},
                        {'support_contact_count': 0}, {'final_world_position': [2.7,1.]},
-                       {'world_goal_error_m': .2}, {'driver_profile': 'precise'},
+                       {'world_goal_error_m': .2}, {'driver_profile': 'unsupported'},
                        {'ground_truth_used_for_navigation': True}, {'tolerance_m': .3}):
             with self.subTest(values=values):
                 report = valid_report()
@@ -226,7 +226,7 @@ class SafetyTests(unittest.TestCase):
             (folder/'0.json').write_text('{}')
             self.assertFalse(dc.qualified(dest))
 
-    def test_lock_and_autotest_exclusion(self):
+    def test_navigation_lock_excludes_concurrent_runs(self):
         root = Path(self.temp.name)
         with patch.object(dc, 'ROOT', root):
             with dc.navigation_lock():
@@ -234,33 +234,6 @@ class SafetyTests(unittest.TestCase):
                     with dc.navigation_lock():
                         pass
             self.assertFalse((root/'outputs/navigation.lock').exists())
-            (root/'outputs/navigation-request.request').touch()
-            with self.assertRaises(RuntimeError):
-                with dc.navigation_lock():
-                    pass
-            self.assertFalse((root/'outputs/navigation.lock').exists())
-
-    def test_navigation_navigation_planner_matches_precise_profile(self):
-        def planner_tree(name):
-            tree = ast.parse((dc.ROOT/'scripts'/name).read_text(encoding='utf-8-sig'))
-            return next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'LidarPlanner')
-
-        reference = planner_tree('reference_navigation.py')
-        tolerance = reference.body.pop(0)
-        self.assertIsInstance(tolerance, ast.Assign)
-        self.assertEqual(tolerance.targets[0].id, 'goal_tolerance')
-        self.assertEqual(tolerance.value.value, .03)
-
-        class V4Profile(ast.NodeTransformer):
-            def visit_Attribute(self, node):
-                if (isinstance(node.value, ast.Name) and node.value.id == 'self'
-                        and node.attr == 'goal_tolerance'):
-                    return ast.copy_location(ast.Constant(.03), node)
-                return self.generic_visit(node)
-
-        expected = planner_tree('navigate_to_goal.py')
-        self.assertEqual(ast.dump(expected), ast.dump(V4Profile().visit(reference)))
-
     def qualifier(self, outcomes, stop='CONFIRMED_STATIONARY'):
         import qualify_destinations as q
         root = Path(self.temp.name)
@@ -379,7 +352,7 @@ if __name__ == '__main__':
     report = {'type': 'OFFLINE_SYNTHETIC_AND_MOCKS_ONLY_NOT_GAZEBO_OR_REAL_AI',
               'unit_tests': result.testsRun, 'unit_failures': len(result.failures),
               'unit_errors': len(result.errors), 'synthetic_cases': trials}
-    (dc.ROOT/'.cache').mkdir(parents=True, exist_ok=True)
-    (dc.ROOT/'.cache/destination-offline-tests.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
+    (CACHE_ROOT).mkdir(parents=True, exist_ok=True)
+    (CACHE_ROOT / 'destination-offline-tests.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
     print(json.dumps(report, indent=2))
     raise SystemExit(0 if result.wasSuccessful() else 1)

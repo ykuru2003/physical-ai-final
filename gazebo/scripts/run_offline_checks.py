@@ -12,9 +12,12 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = (
     'tests.test_archive_outputs',
-    'tests.test_reference_runtime',
+    'tests.test_navigation_runtime',
     'tests.test_world_evaluation',
     'tests.test_destination_control',
+    'tests.test_recording',
+    'tests.test_settings',
+    'tests.test_task_results',
     'tests.offline_navigation',
 )
 

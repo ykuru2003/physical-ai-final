@@ -1,7 +1,7 @@
-"""Synthetic LiDAR trials shared by baseline/precise offline checks; no ROS imports."""
+"""Synthetic LiDAR trials for the current navigation controller; no ROS imports."""
+from tests import CACHE_ROOT
 import json
 import math
-from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 import xml.etree.ElementTree as ET
@@ -105,13 +105,11 @@ def run_checks(driver, *, report_name, test_type, goal_tolerance=None):
     if goal_tolerance is not None:
         for case in results:
             assert math.hypot(3 - case['final_pose'][0], 1 - case['final_pose'][1]) < goal_tolerance
-        # Historical baseline drift bound, not a new physical-world measurement.
-        assert .178143970581869 + goal_tolerance < .25
     report = dict(
         test_type=test_type, cases=results, invalid_scan_and_blocked='PASS',
         python_syntax='PASS', sdf_xml_front_support_and_sensors='PASS',
     )
-    output = ROOT / '.cache' / report_name
+    output = CACHE_ROOT / report_name
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, indent=2))
@@ -119,16 +117,11 @@ def run_checks(driver, *, report_name, test_type, goal_tolerance=None):
 
 
 def main():
-    import reference_navigation as reference
+    import navigate_to_goal as navigation
 
-    for profile, report, tolerance in (
-            ('baseline', 'reference-baseline-tests.json', None),
-            ('precise', 'reference-precise-tests.json', .03)):
-        driver = SimpleNamespace(LidarPlanner=partial(reference.planner_for, profile),
-                                 wrap=reference.wrap)
-        run_checks(driver, report_name=report,
-                   test_type=f'{profile.upper()} OFFLINE SYNTHETIC ONLY; NOT GAZEBO/ROS',
-                   goal_tolerance=tolerance)
+    run_checks(navigation, report_name='navigation-tests.json',
+               test_type='NAVIGATION OFFLINE SYNTHETIC ONLY; NOT GAZEBO/ROS',
+               goal_tolerance=.03)
 
 
 if __name__ == '__main__':

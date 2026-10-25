@@ -13,47 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  workshop:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Dockerの自動ビルド
-        run: docker compose build
-
-      - name: 1. Ruff — code quality
-        run: docker compose run --rm workshop ruff check .
-
-      - name: Download a tiny LeRobot dataset subset
-        run: docker compose run --rm workshop python -m roboops download --max-episodes 20
-
-      - name: 2. Pytest — code, Notebook, and data contracts
-        run: docker compose run --rm workshop pytest -q
-
-      - name: 3. Dataset validation
-        run: docker compose run --rm workshop python -m roboops validate
-
-      - name: 4. ACTの学習経路確認
-        run: docker compose run --rm workshop python -m roboops train --config configs/train_ci.yaml
-
-      - name: 5. PushTの自動評価
-        run: docker compose run --rm workshop python -m roboops evaluate --config configs/eval_ci.yaml
-
-      - name: Keep CI evidence
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: roboops-ci-evidence
-          path: |
-            .cache/ci/checkpoint/training_metrics.json
-            evaluation/metrics-ci.json
-          include-hidden-files: true
-          if-no-files-found: warn
-
   offline:
     name: Gazebo Python offline checks
     defaults:
@@ -74,7 +33,7 @@ jobs:
         env:
           PYTHONUTF8: '1'
         run: python scripts/run_offline_checks.py
-      - name: Check the workshop-first repository layout
+      - name: Check the submission repository layout
         working-directory: .
         run: python tests/test_layout.py
       - name: Check all commands without services

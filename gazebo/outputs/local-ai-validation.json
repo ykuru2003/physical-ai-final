@@ -3,8 +3,8 @@
   "status": "PASS",
   "model": "qwen3:1.7b",
   "model_digest": "8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7",
-  "selector_sha256": "664816fd232d68bb3ab48797d06ddb6859488de9648ce6523f265cbab4f9025e",
-  "validator_sha256": "3791ba1d6b1b3054c27273a794e29238bc3fb31182ef86af1865de2fe86ca3d6",
+  "selector_sha256": "857e662dcb7421e27b0feae1488214a8b123550dbde0ea68ed8ffe8a2b3b642c",
+  "validator_sha256": "58d5efb49925ff2ac4c7534bd573a78fb98c7a6f1d55a5cf4549b35823e97896",
   "language_signature": "6d0db87c5eed5a0681024975c45c82c9c2b8175bd25a89d22c3443e97a5c31d8",
   "cases": [
     {
@@ -19,8 +19,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 7636755600,
-        "total_duration_ns": 17773697500
+        "load_duration_ns": 20821670800,
+        "total_duration_ns": 31133304800
       },
       "passed": true
     },
@@ -36,8 +36,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 12703000,
-        "total_duration_ns": 2109816200
+        "load_duration_ns": 23864200,
+        "total_duration_ns": 2149208200
       },
       "passed": true
     },
@@ -53,8 +53,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 10182500,
-        "total_duration_ns": 2107515700
+        "load_duration_ns": 9105700,
+        "total_duration_ns": 2058423000
       },
       "passed": true
     },
@@ -70,8 +70,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 12988200,
-        "total_duration_ns": 2016110000
+        "load_duration_ns": 9126500,
+        "total_duration_ns": 2251370600
       },
       "passed": true
     },
@@ -87,8 +87,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 10117800,
-        "total_duration_ns": 2026896300
+        "load_duration_ns": 9788500,
+        "total_duration_ns": 2469945400
       },
       "passed": true
     },
@@ -104,8 +104,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 9639700,
-        "total_duration_ns": 1855913500
+        "load_duration_ns": 10698600,
+        "total_duration_ns": 2239283600
       },
       "passed": true
     },
@@ -121,8 +121,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 110450500,
-        "total_duration_ns": 2137927400
+        "load_duration_ns": 12729700,
+        "total_duration_ns": 2402758300
       },
       "passed": true
     },
@@ -138,8 +138,8 @@
         "intent": "stop",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 2688900,
-        "total_duration_ns": 628688200
+        "load_duration_ns": 3662200,
+        "total_duration_ns": 793174900
       },
       "passed": true
     },
@@ -155,8 +155,8 @@
         "intent": "stop",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3509600,
-        "total_duration_ns": 680596000
+        "load_duration_ns": 4312600,
+        "total_duration_ns": 611435100
       },
       "passed": true
     },
@@ -172,8 +172,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 2726900,
-        "total_duration_ns": 638769600
+        "load_duration_ns": 6127000,
+        "total_duration_ns": 731307400
       },
       "passed": true
     },
@@ -189,8 +189,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 21,
-        "load_duration_ns": 4839700,
-        "total_duration_ns": 1849596700
+        "load_duration_ns": 8258700,
+        "total_duration_ns": 1748986800
       },
       "passed": true
     },
@@ -206,8 +206,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 20,
-        "load_duration_ns": 5947200,
-        "total_duration_ns": 1687294600
+        "load_duration_ns": 6893900,
+        "total_duration_ns": 1906603700
       },
       "passed": true
     },
@@ -223,8 +223,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 20,
-        "load_duration_ns": 7704200,
-        "total_duration_ns": 2137188400
+        "load_duration_ns": 5502000,
+        "total_duration_ns": 2017102200
       },
       "passed": true
     },
@@ -240,8 +240,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 6660800,
-        "total_duration_ns": 781291700
+        "load_duration_ns": 2610700,
+        "total_duration_ns": 649097100
       },
       "passed": true
     },
@@ -257,8 +257,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 5388300,
-        "total_duration_ns": 645145600
+        "load_duration_ns": 2648600,
+        "total_duration_ns": 655522000
       },
       "passed": true
     },
@@ -274,8 +274,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 4429500,
-        "total_duration_ns": 659212700
+        "load_duration_ns": 2158700,
+        "total_duration_ns": 774212800
       },
       "passed": true
     },
@@ -291,8 +291,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 2151500,
-        "total_duration_ns": 551675000
+        "load_duration_ns": 6961900,
+        "total_duration_ns": 570134700
       },
       "passed": true
     },
@@ -308,8 +308,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 10899700,
-        "total_duration_ns": 2032951600
+        "load_duration_ns": 10928900,
+        "total_duration_ns": 2014834800
       },
       "passed": true
     },
@@ -325,8 +325,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 5361200,
-        "total_duration_ns": 2120923500
+        "load_duration_ns": 9846400,
+        "total_duration_ns": 2384477900
       },
       "passed": true
     },
@@ -342,8 +342,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 7894000,
-        "total_duration_ns": 2130922400
+        "load_duration_ns": 14096600,
+        "total_duration_ns": 2540800900
       },
       "passed": true
     },
@@ -359,8 +359,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 22,
-        "load_duration_ns": 6744400,
-        "total_duration_ns": 2284878000
+        "load_duration_ns": 13003500,
+        "total_duration_ns": 2650754900
       },
       "passed": true
     },
@@ -376,8 +376,8 @@
         "intent": "stop",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 6036700,
-        "total_duration_ns": 676996700
+        "load_duration_ns": 3283500,
+        "total_duration_ns": 798818300
       },
       "passed": true
     },
@@ -393,8 +393,8 @@
         "intent": "stop",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3519600,
-        "total_duration_ns": 644978800
+        "load_duration_ns": 3456800,
+        "total_duration_ns": 839065600
       },
       "passed": true
     },
@@ -410,8 +410,8 @@
         "intent": "stop",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3324700,
-        "total_duration_ns": 694582100
+        "load_duration_ns": 6583200,
+        "total_duration_ns": 866807000
       },
       "passed": true
     },
@@ -427,8 +427,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 5009700,
-        "total_duration_ns": 721841500
+        "load_duration_ns": 5733600,
+        "total_duration_ns": 763809700
       },
       "passed": true
     },
@@ -444,8 +444,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 21,
-        "load_duration_ns": 6562200,
-        "total_duration_ns": 1899547400
+        "load_duration_ns": 9976100,
+        "total_duration_ns": 2397763700
       },
       "passed": true
     },
@@ -461,8 +461,8 @@
         "intent": "travel",
         "inference_count": 2,
         "eval_count": 20,
-        "load_duration_ns": 9167300,
-        "total_duration_ns": 1825418800
+        "load_duration_ns": 10114600,
+        "total_duration_ns": 1792098800
       },
       "passed": true
     },
@@ -478,8 +478,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3830000,
-        "total_duration_ns": 676078900
+        "load_duration_ns": 3715000,
+        "total_duration_ns": 685386600
       },
       "passed": true
     },
@@ -495,8 +495,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3324800,
-        "total_duration_ns": 658815100
+        "load_duration_ns": 4891600,
+        "total_duration_ns": 600726100
       },
       "passed": true
     },
@@ -512,8 +512,8 @@
         "intent": "other",
         "inference_count": 1,
         "eval_count": 7,
-        "load_duration_ns": 3009300,
-        "total_duration_ns": 769554300
+        "load_duration_ns": 4171600,
+        "total_duration_ns": 801033900
       },
       "passed": true
     }

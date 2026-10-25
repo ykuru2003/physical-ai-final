@@ -23,24 +23,19 @@ id_rsa
 id_ed25519
 **/service-account*.json
 
-# Local backups, environments and generated workshop files.
+# Local backups, environments and generated files.
 *.bak
 *.orig
 *~
 .venv/
-.uv-cache/
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/
-**/.ipynb_checkpoints/
 **/.cache/
 *.py[cod]
 *.log
 .DS_Store
 Thumbs.db
-/src/
-/checkpoints/
-/evaluation/
 /outputs/
 work/
 

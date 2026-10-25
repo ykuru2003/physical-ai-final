@@ -1,20 +1,8 @@
 {
   "overall_status": "REVALIDATION_REQUIRED",
-  "qualification_valid": {
-    "east_station": false,
-    "south_station": false,
-    "south_near": false,
-    "west_station": false
-  },
-  "real_ai_certificate_valid": false,
   "integration_results": [],
-  "remaining": [
-    "Requalify destinations using the current navigation commands and ROS topics.",
-    "Validate the real local model with the current controller fingerprint.",
-    "Verify end-to-end navigation."
-  ],
+  "reason": "Submission refactor: repeat real AI validation and end-to-end verification.",
   "historical_evidence": {
-    "archive": "../work/gazebo-history.zip",
-    "prefix": "before-role-names/"
+    "path": "outputs/historical/before-submission-refactor/navigation-verification.json"
   }
 }

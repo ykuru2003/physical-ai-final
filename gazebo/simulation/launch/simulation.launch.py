@@ -13,12 +13,6 @@ def generate_launch_description():
     simulation = Path(__file__).resolve().parents[1]
     return LaunchDescription([
         DeclareLaunchArgument("gui", default_value="true"),
-        # A one-shot request is consumed by the runner before it starts moving.
-        ExecuteProcess(
-            cmd=["python3", "/workspace/scripts/verify_navigation.py", "requested-drive"],
-            condition=IfCondition(str(Path("/workspace/outputs/navigation-request.request").exists()).lower()),
-            output="screen",
-        ),
         ExecuteProcess(
             cmd=["gz", "sim", "-s", "-r", "-v", "3", str(simulation / "worlds" / "practice.sdf")],
             output="screen",

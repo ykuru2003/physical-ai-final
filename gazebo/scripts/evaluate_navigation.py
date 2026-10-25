@@ -56,15 +56,10 @@ def score_run(driver_result, driver_exit, actual_xy, odometry_xy,
     return result
 
 
-def driver_command(driver, goal, output):
-    """Resolve each evaluation profile to its canonical executable."""
-    if driver == 'navigation':
-        return [sys.executable, '-u', '/workspace/scripts/navigate_to_goal.py',
-                '--goal-x', str(goal[0]), '--goal-y', str(goal[1]), '--output', str(output)]
-    if driver not in ('baseline', 'precise'):
-        raise ValueError(f'Unknown reference profile: {driver}')
-    return [sys.executable, '-u', '/workspace/scripts/reference_navigation.py',
-            '--profile', driver]
+def driver_command(goal, output):
+    """Run the current navigation controller with per-run output."""
+    return [sys.executable, '-u', '/workspace/scripts/navigate_to_goal.py',
+            '--goal-x', str(goal[0]), '--goal-y', str(goal[1]), '--output', str(output)]
 
 
 def main():
@@ -78,21 +73,16 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-dir', required=True)
-    parser.add_argument('--driver', choices=('baseline', 'precise', 'navigation'), default='baseline')
     parser.add_argument('--goal-x', type=float, default=3.0)
     parser.add_argument('--goal-y', type=float, default=1.0)
     args = parser.parse_args()
     if not all(math.isfinite(v) for v in (args.goal_x, args.goal_y)):
         parser.error('Goal coordinates must be finite')
-    if args.driver != 'navigation' and (args.goal_x, args.goal_y) != (3., 1.):
-        parser.error('Only navigation supports configurable goals')
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    driver_path = (output/'navigation-result.json' if args.driver == 'navigation'
-                   else Path('/workspace/outputs/navigation-run.json'))
-    if args.driver == 'navigation' and (driver_path.exists() or (output/'driver-run.json').exists()):
+    driver_path = output/'navigation-result.json'
+    if driver_path.exists() or (output/'driver-run.json').exists():
         raise RuntimeError('Refusing to reuse existing navigation evaluation results')
-    previous_driver_report = driver_path.read_bytes() if driver_path.exists() else None
 
     class Monitor(Node):
         def __init__(self):
@@ -157,8 +147,8 @@ def main():
             rclpy.spin_once(node, timeout_sec=.1)
             if time.monotonic() > deadline:
                 raise RuntimeError('No synchronized world pose: check PosePublisher and /robot/ground_truth bridge')
-        print(f'EVALUATION: world-position monitor ready; starting {args.driver} driver', flush=True)
-        command = driver_command(args.driver, (args.goal_x, args.goal_y), driver_path)
+        print('EVALUATION: world-position monitor ready; starting navigation driver', flush=True)
+        command = driver_command((args.goal_x, args.goal_y), driver_path)
         child = subprocess.Popen(command)
         deadline = time.monotonic()+260
         while child.poll() is None and rclpy.ok():
@@ -203,12 +193,10 @@ def main():
         if child is not None:
             if driver_path.exists() and not (output/'driver-run.json').exists():
                 (output/'driver-run.json').write_bytes(driver_path.read_bytes())
-            if previous_driver_report is not None:
-                driver_path.write_bytes(previous_driver_report)
-            elif driver_path.exists():
+            if driver_path.exists():
                 driver_path.replace(output/'driver-run.json')
         report['observed_frames'] = sorted(node.observed_frames)
-        report['driver_profile'] = args.driver
+        report['driver_profile'] = 'navigation'
         report['world_topic'] = '/robot/ground_truth'
         report['ground_truth_used_for_navigation'] = False
         (output/'evaluation.json').write_text(json.dumps(report, indent=2)+'\n')
