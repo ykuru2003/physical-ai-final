@@ -12,7 +12,7 @@ if ($env:PHYSICAL_AI_TEST_SCRIPT -ne $PSCommandPath) {
     exit $LASTEXITCODE
 }
 $repositoryFixtureRoot = [IO.Path]::GetFullPath($env:PHYSICAL_AI_TEST_FIXTURE)
-$global:PhysicalAiTestFixtureRoot = Join-Path $repositoryFixtureRoot 'extensions/gazebo'
+$global:PhysicalAiTestFixtureRoot = Join-Path $repositoryFixtureRoot 'gazebo'
 $cacheBoundary = $cacheRoot + [IO.Path]::DirectorySeparatorChar
 if (-not $global:PhysicalAiTestFixtureRoot.StartsWith($cacheBoundary, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Test fixture must stay inside the test cache.'
@@ -22,9 +22,9 @@ Copy-Item -LiteralPath (Join-Path $root 'project.ps1') -Destination $repositoryF
 $worldDir = Join-Path $global:PhysicalAiTestFixtureRoot 'simulation/worlds'
 New-Item -ItemType Directory -Path $worldDir -Force | Out-Null
 $worldPath = Join-Path $worldDir 'practice.sdf'
-Copy-Item -LiteralPath (Join-Path $root 'extensions/gazebo/simulation/worlds/practice.sdf') -Destination $worldPath
-foreach ($version in @('v3','v4','v5')) {
-    Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot "scripts/drive_to_goal_$version.py") -Value '# fixture only'
+Copy-Item -LiteralPath (Join-Path $root 'gazebo/simulation/worlds/practice.sdf') -Destination $worldPath
+foreach ($name in @('reference_navigation.py','navigate_to_goal.py')) {
+    Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot "scripts/$name") -Value '# fixture only'
 }
 New-Item -ItemType Directory -Path (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs') -Force | Out-Null
 $global:PhysicalAiTestDockerCalls = [System.Collections.Generic.List[object]]::new()
@@ -59,14 +59,14 @@ function global:docker {
         Write-Output '{"services":{"simulator":{"ports":[{"target":6080,"published":6080}]},"workshop":{"ports":[{"target":8888,"published":8888}]}}}'
         return
     }
-    if ($global:PhysicalAiTestFailReadiness -and $command -match 'wait_step2_ready.py') {
+    if ($global:PhysicalAiTestFailReadiness -and $command -match 'wait_for_sensors.py') {
         Write-Output 'Mock readiness failure'
         $global:LASTEXITCODE = 1
         return
     }
-    if ($command -match 'drive_to_goal_v3.py') {
+    if ($command -match 'reference_navigation.py') {
         $report = @{ result='GOAL REACHED!'; obstacle_collisions=@(); final_pose=@(3,1,0); support_contact_count=20; trace=@(@{clearance=0.5}) }
-        $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step2-run.json') -Encoding UTF8
+        $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json') -Encoding UTF8
     }
 }
 function global:python {
@@ -96,8 +96,8 @@ try {
     }
     Test-Case 'Evaluate forwards parameters from an unrelated working directory' {
         $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $output = & $launcher Evaluate -Driver v5 -GoalX 1 -GoalY -1 -CheckOnly 6>&1 | Out-String
-        Assert-True ($output -match 'configured for v5') 'Driver parameter was not forwarded.'
+        $output = & $launcher Evaluate -Driver navigation -GoalX 1 -GoalY -1 -CheckOnly 6>&1 | Out-String
+        Assert-True ($output -match 'configured for navigation') 'Driver parameter was not forwarded.'
         Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'CheckOnly changed the world.'
         Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0) 'CheckOnly called Docker.'
     }
@@ -111,11 +111,11 @@ try {
         Assert-Fails { & $launcher Verify -CheckOnly } 'supported only'
         Assert-True ($global:PhysicalAiTestPythonCalls.Count -eq 0) 'Unsupported CheckOnly launched Python.'
     }
-    Test-Case 'Navigation lock stops evaluate, cases and legacy runs before Docker' {
+    Test-Case 'Navigation lock stops evaluate, cases and reference runs before Docker' {
         $lock = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation.lock'
         Set-Content -LiteralPath $lock -Value 'test fixture'
         try {
-            foreach ($action in @('Evaluate','Cases','RunStep2')) {
+            foreach ($action in @('Evaluate','Cases','RunReference')) {
                 Assert-Fails { & $launcher $action } 'navigation.lock'
             }
             Assert-True ($global:PhysicalAiTestDockerCalls.Count -eq 0) 'Locked navigation called Docker.'
@@ -128,31 +128,31 @@ try {
         Assert-True ((Get-Location).Path -eq $before) 'Management command leaked its working directory.'
     }
     Test-Case 'Evaluate forwards goal coordinates and executes in the project directory' {
-        & $launcher Evaluate -Driver v5 -GoalX 1 -GoalY -1 | Out-Null
+        & $launcher Evaluate -Driver navigation -GoalX 1 -GoalY -1 | Out-Null
         $call = $global:PhysicalAiTestDockerCalls[-1]
         $command = $call.Arguments -join ' '
-        Assert-True ($command -match '--driver v5 --goal-x 1 --goal-y -1') 'Evaluate dropped the goal coordinates.'
+        Assert-True ($command -match '--driver navigation --goal-x 1 --goal-y -1') 'Evaluate dropped the goal coordinates.'
         Assert-True ($call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Evaluate used the wrong compose directory.'
     }
     Test-Case 'Verify dispatches the installed small model and saves the latest log' {
         & $launcher Verify | Out-Null
         $call = $global:PhysicalAiTestPythonCalls[-1]
-        Assert-True (($call.Arguments -join ' ') -match 'complete_step3.py --model qwen3:1.7b') 'Verify used the wrong model or entry point.'
+        Assert-True (($call.Arguments -join ' ') -match 'verify_navigation.py --model qwen3:1.7b') 'Verify used the wrong model or entry point.'
         Assert-True ($call.Directory -eq $global:PhysicalAiTestFixtureRoot) 'Verify used the wrong directory.'
-        Assert-True (Test-Path -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step3-full-check.log')) 'Verify did not preserve its log.'
+        Assert-True (Test-Path -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-verification.log')) 'Verify did not preserve its log.'
     }
     Test-Case 'Verification and offline-test failures propagate to the caller' {
         $global:PhysicalAiTestPythonExit = 7
         try {
             Assert-Fails { & $launcher Verify } 'exit 7'
-            $log = Get-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step3-full-check.log') -Raw
+            $log = Get-Content -LiteralPath (Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-verification.log') -Raw
             Assert-True ($log -match 'VERIFICATION INCOMPLETE') 'Verification failure was missing from the log.'
             Assert-Fails { & $launcher TestExtension } 'exit 7'
         } finally { $global:PhysicalAiTestPythonExit = 0 }
     }
-    Test-Case 'Failed legacy case suite restores original world and previous run evidence' {
+    Test-Case 'Failed reference case suite restores original world and previous run evidence' {
         $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step2-run.json'
+        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json'
         Set-Content -LiteralPath $reportPath -Value '{"original":true}' -Encoding UTF8
         $reportBefore = (Get-FileHash -LiteralPath $reportPath).Hash
         $global:PhysicalAiTestFailReadiness = $true
@@ -160,11 +160,11 @@ try {
         Assert-True ((Get-FileHash -LiteralPath $worldPath).Hash -eq $before) 'Failed suite did not restore the original world bytes.'
         Assert-True ((Get-FileHash -LiteralPath $reportPath).Hash -eq $reportBefore) 'Failed suite replaced existing run evidence.'
     }
-    Test-Case 'Successful legacy case suite restores original world and run evidence' {
+    Test-Case 'Successful reference case suite restores original world and run evidence' {
         $before = (Get-FileHash -LiteralPath $worldPath).Hash
-        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step2-run.json'
+        $reportPath = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/navigation-run.json'
         $reportBefore = (Get-FileHash -LiteralPath $reportPath).Hash
-        $sessionRoot = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/step2-cases'
+        $sessionRoot = Join-Path $global:PhysicalAiTestFixtureRoot 'outputs/obstacle-cases'
         $previousSessions = @(Get-ChildItem -LiteralPath $sessionRoot -Directory | Select-Object -ExpandProperty FullName)
         & $launcher Cases | Out-Null
         $newSession = @(Get-ChildItem -LiteralPath $sessionRoot -Directory | Where-Object { $_.FullName -notin $previousSessions })

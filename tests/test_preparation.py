@@ -48,37 +48,48 @@ class PreparationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=cache) as directory:
             fixture = Path(directory)
             source = fixture / "source"
+            native_cache = fixture / "runtime-cache"
+            filename = next(iter(DATASET_FILES.values()))
             cached = fixture / "downloaded-file"
             cached.write_bytes(b"pinned dataset content")
             hub = ModuleType("huggingface_hub")
             hub.hf_hub_download = Mock(return_value=str(cached))
             with patch.dict("sys.modules", {"huggingface_hub": hub}):
-                prepare_source(source)
+                prepare_source(source, cache_root=native_cache)
                 self.assertEqual(hub.hf_hub_download.call_count, len(DATASET_FILES))
                 self.assertFalse((source / ".cache").exists())
+                self.assertFalse(any(path.is_dir() for path in source.iterdir()))
+                native = native_cache
+                for upstream, local in DATASET_FILES.items():
+                    self.assertEqual(
+                        (native / upstream).read_bytes(), (source / local).read_bytes()
+                    )
+                (native / next(iter(DATASET_FILES))).write_bytes(b"corrupted cache")
+                prepare_source(source, cache_root=native_cache)
+                self.assertEqual(
+                    (native / next(iter(DATASET_FILES))).read_bytes(), cached.read_bytes()
+                )
                 for call in hub.hf_hub_download.call_args_list:
                     self.assertEqual(call.kwargs["revision"], DATASET_REVISION)
                     self.assertNotIn("local_dir", call.kwargs)
                 hub.hf_hub_download.reset_mock()
-                prepare_source(source)
+                prepare_source(source, cache_root=native_cache)
                 hub.hf_hub_download.assert_not_called()
                 for stale in ("content", "revision", "missing"):
                     with self.subTest(stale=stale):
                         manifest_path = source / "source.json"
                         if stale == "content":
-                            (source / DATASET_FILES[0]).write_bytes(b"changed")
+                            (source / filename).write_bytes(b"changed")
                         elif stale == "revision":
                             manifest = json.loads(manifest_path.read_text())
                             manifest["dataset_revision"] = "different-revision"
                             manifest_path.write_text(json.dumps(manifest))
                         else:
-                            (source / DATASET_FILES[0]).unlink()
+                            (source / filename).unlink()
                         hub.hf_hub_download.reset_mock()
-                        prepare_source(source)
+                        prepare_source(source, cache_root=native_cache)
                         self.assertEqual(hub.hf_hub_download.call_count, len(DATASET_FILES))
-                        self.assertEqual(
-                            (source / DATASET_FILES[0]).read_bytes(), cached.read_bytes()
-                        )
+                        self.assertEqual((source / filename).read_bytes(), cached.read_bytes())
 
     def test_episode_split_is_deterministic_and_statistics_exclude_validation(self):
         bundle = sample_bundle()

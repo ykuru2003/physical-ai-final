@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('Help','Start','Workshop','Stop','Status','Logs','Build','Validate','Shell','Test','TestExtension','Simulator','SimulatorStop','SimulatorStatus','SimulatorLogs','SimulatorShell','Check','Demo','RunStep2','Evaluate','Verify','Cases','Clean')]
+    [ValidateSet('Help','Start','Workshop','Stop','Status','Logs','Build','Validate','Shell','Test','TestExtension','Simulator','SimulatorStop','SimulatorStatus','SimulatorLogs','SimulatorShell','Check','Demo','RunReference','Evaluate','Verify','Cases','Clean')]
     [string]$Action = 'Help',
-    [ValidateSet('v3','v4','v5')]
-    [string]$Driver = 'v5',
+    [ValidateSet('baseline','precise','navigation')]
+    [string]$Driver = 'navigation',
     [double]$GoalX = 3.0,
     [double]$GoalY = 1.0,
     [switch]$CheckOnly
@@ -15,12 +15,12 @@ $script:RepositoryRoot = $PSScriptRoot
 
 # Shared simulator paths and Compose options live here, not in another launcher.
 function Get-GazeboRoot {
-    return Join-Path $script:RepositoryRoot 'extensions/gazebo'
+    return Join-Path $script:RepositoryRoot 'gazebo'
 }
 
 function Assert-GazeboIdle {
     $root = Get-GazeboRoot
-    foreach ($name in @('step2-autotest.request','step2-autotest.running','navigation.lock')) {
+    foreach ($name in @('navigation-request.request','navigation-request.running','navigation.lock')) {
         if (Test-Path -LiteralPath (Join-Path $root "outputs/$name")) {
             throw "Navigation or automatic test pending/running: $name"
         }
@@ -78,15 +78,16 @@ function Invoke-GazeboManagement {
 }
 
 function Invoke-GazeboEvaluation {
-    param([switch]$CheckOnly, [string]$Driver='v5', [double]$GoalX=3.0, [double]$GoalY=1.0)
+    param([switch]$CheckOnly, [string]$Driver='navigation', [double]$GoalX=3.0, [double]$GoalY=1.0)
     $projectRoot = Get-GazeboRoot
     $world = [xml](Get-Content -LiteralPath (Join-Path $projectRoot 'simulation/worlds/practice.sdf') -Raw)
     if ($null -eq $world.SelectSingleNode('/sdf/world/model[@name="practice_robot"]/plugin[@name="gz::sim::systems::PosePublisher"]')) { throw 'Ground-truth pose publisher is missing' }
-    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot "scripts/drive_to_goal_$Driver.py"))) { throw "Driver file missing: $Driver" }
+    $driverScript = if ($Driver -eq 'navigation') { 'scripts/navigate_to_goal.py' } else { 'scripts/reference_navigation.py' }
+    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $driverScript))) { throw "Driver file missing: $Driver" }
     if ($CheckOnly) { Write-Host "CHECK PASSED: world-position evaluation configured for $Driver. No simulation was started."; return }
     Assert-GazeboIdle
     $runId = $Driver+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
-    $outputDir = Join-Path $projectRoot "outputs/step2-evaluation/$runId"
+    $outputDir = Join-Path $projectRoot "outputs/world-evaluation/$runId"
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     Push-Location $projectRoot
     try {
@@ -94,9 +95,9 @@ function Invoke-GazeboEvaluation {
         if ($LASTEXITCODE -ne 0) { throw 'Cannot start simulator' }
         Invoke-GazeboCompose restart simulator
         if ($LASTEXITCODE -ne 0) { throw 'Cannot restart simulator' }
-        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/wait_step2_ready.py 2>&1 | Tee-Object -FilePath (Join-Path $outputDir 'readiness.log')
+        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/wait_for_sensors.py 2>&1 | Tee-Object -FilePath (Join-Path $outputDir 'readiness.log')
         if ($LASTEXITCODE -ne 0) { throw 'ROS topics not ready' }
-        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/evaluate_step2.py --driver $Driver --goal-x $GoalX --goal-y $GoalY --output-dir "/workspace/outputs/step2-evaluation/$runId" 2>&1 | Tee-Object -FilePath (Join-Path $outputDir 'evaluation.log')
+        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/evaluate_navigation.py --driver $Driver --goal-x $GoalX --goal-y $GoalY --output-dir "/workspace/outputs/world-evaluation/$runId" 2>&1 | Tee-Object -FilePath (Join-Path $outputDir 'evaluation.log')
         $evaluationExit = $LASTEXITCODE
         if ($evaluationExit -eq 2) {
             Write-Warning 'Measurement finished: the world-position goal or contact criteria were not met. This is an evaluation result, not a PowerShell error.'
@@ -120,16 +121,16 @@ function Invoke-GazeboDrive {
         Invoke-GazeboCompose restart simulator
         if ($LASTEXITCODE -ne 0) { throw 'Cannot restart simulator' }
         # Typed subscriptions wait even before Gazebo has advertised the topics.
-        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/wait_step2_ready.py 2>&1 | Tee-Object -FilePath outputs/step2-topic-readiness.log
+        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/wait_for_sensors.py 2>&1 | Tee-Object -FilePath outputs/sensor-readiness.log
         if ($LASTEXITCODE -ne 0) {
-            Invoke-GazeboCompose ps 2>&1 | Tee-Object -FilePath outputs/step2-startup-diagnostics.log
-            Invoke-GazeboCompose logs --tail 150 simulator 2>&1 | Tee-Object -FilePath outputs/step2-startup-diagnostics.log -Append
-            throw 'ROS startup failed. See outputs/step2-topic-readiness.log and outputs/step2-startup-diagnostics.log'
+            Invoke-GazeboCompose ps 2>&1 | Tee-Object -FilePath outputs/simulator-startup.log
+            Invoke-GazeboCompose logs --tail 150 simulator 2>&1 | Tee-Object -FilePath outputs/simulator-startup.log -Append
+            throw 'ROS startup failed. See outputs/sensor-readiness.log and outputs/simulator-startup.log'
         }
-        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/drive_to_goal_v3.py 2>&1 | Tee-Object -FilePath outputs/step2-run.log
+        Invoke-GazeboCompose exec -T simulator /ros_entrypoint.sh python3 -u /workspace/scripts/reference_navigation.py --profile baseline 2>&1 | Tee-Object -FilePath outputs/navigation-run.log
         if ($LASTEXITCODE -ne 0) {
-            $reason = Get-Content outputs/step2-run.log -Tail 1
-            throw "STEP 2 failed: $reason (details: outputs/step2-run.log)"
+            $reason = Get-Content outputs/navigation-run.log -Tail 1
+            throw "Reference navigation failed: $reason (details: outputs/navigation-run.log)"
         }
         Write-Host 'Goal reached. Inspect the Gazebo view and trajectory; goal success alone does not prove no contact.'
     } finally {
@@ -144,8 +145,8 @@ function Invoke-GazeboVerification {
     $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,6)
     $logDir = Join-Path $projectRoot 'outputs'
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    $logPath = Join-Path $logDir "step3-full-check-$runId.log"
-    $latestLog = Join-Path $logDir 'step3-full-check.log'
+    $logPath = Join-Path $logDir "navigation-verification-$runId.log"
+    $latestLog = Join-Path $logDir 'navigation-verification.log'
     Push-Location $projectRoot
     try {
         try {
@@ -155,7 +156,7 @@ function Invoke-GazeboVerification {
         }
         Write-Host 'Using installed qwen3:1.7b. Valid driving and AI evidence will be reused.'
         $ErrorActionPreference = 'Continue'
-        python -u scripts/complete_step3.py --model qwen3:1.7b 2>&1 | Tee-Object -FilePath $logPath
+        python -u scripts/verify_navigation.py --model qwen3:1.7b 2>&1 | Tee-Object -FilePath $logPath
         $result = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
         if ($result -ne 0) { throw "Runtime checks did not pass (exit $result). Results: $logPath" }
@@ -195,11 +196,11 @@ function Invoke-GazeboCases {
     if ($CheckOnly) { Write-Host 'CHECK PASSED: 3 valid worlds; no Docker commands or file changes.'; return }
     Assert-GazeboIdle
 
-    $session = Join-Path $projectRoot ('outputs/step2-cases/' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,6))
+    $session = Join-Path $projectRoot ('outputs/obstacle-cases/' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,6))
     $previous = Join-Path $session 'previous'
     New-Item -ItemType Directory -Path $previous -Force | Out-Null
     [IO.File]::WriteAllBytes((Join-Path $session 'practice.before-tests.sdf'), $originalBytes)
-    $artifacts = @('step2-run.log','step2-run.json','step2-topic-readiness.log','step2-readiness.json','step2-startup-diagnostics.log')
+    $artifacts = @('navigation-run.log','navigation-run.json','sensor-readiness.log','sensor-readiness.json','simulator-startup.log')
     $results = [System.Collections.Generic.List[object]]::new()
     $allPassed = $true
     $worldChanged = $false
@@ -222,7 +223,7 @@ function Invoke-GazeboCases {
                 [IO.File]::WriteAllText((Join-Path $caseDir 'practice.sdf'), $candidate, [Text.UTF8Encoding]::new($false))
                 Write-Host "RUNNING $($case.Name)"
                 Invoke-GazeboDrive
-                $run = Get-Content -LiteralPath (Join-Path $projectRoot 'outputs/step2-run.json') -Raw | ConvertFrom-Json
+                $run = Get-Content -LiteralPath (Join-Path $projectRoot 'outputs/navigation-run.json') -Raw | ConvertFrom-Json
                 if ($run.result -ne 'GOAL REACHED!') { throw "Driver result: $($run.result)" }
                 if (@($run.obstacle_collisions).Count -ne 0) { throw 'Obstacle collision detected' }
                 $record.final_odometry = $run.final_pose
@@ -314,10 +315,10 @@ Optional Gazebo extension:
   .\project.ps1 SimulatorStop / SimulatorStatus / SimulatorLogs / SimulatorShell
   .\project.ps1 TestExtension   Run offline Python and unified PowerShell checks
   .\project.ps1 Verify          Run real local AI and simulated navigation
-  .\project.ps1 Evaluate -GoalX 3 -GoalY 1 -Driver v5
+  .\project.ps1 Evaluate -GoalX 3 -GoalY 1 -Driver navigation
   .\project.ps1 Cases -CheckOnly
   .\project.ps1 Clean -CheckOnly
-Other extension actions: Check, Demo, RunStep2. These move the simulated robot.
+Other extension actions: Check, Demo, RunReference. These move the simulated robot.
 Verify/Evaluate restart the simulator. The ACT-to-Gazebo adapter is not implemented.
 "@
     return
@@ -330,7 +331,7 @@ switch ($Action) {
     'SimulatorShell' { Invoke-GazeboManagement -Action Shell; return }
     'Check' { Invoke-GazeboManagement -Action Check; return }
     'Demo' { Invoke-GazeboManagement -Action Demo; return }
-    'RunStep2' { Invoke-GazeboDrive; return }
+    'RunReference' { Invoke-GazeboDrive; return }
     'Evaluate' { Invoke-GazeboEvaluation -Driver $Driver -GoalX $GoalX -GoalY $GoalY -CheckOnly:$CheckOnly; return }
     'Verify' { Invoke-GazeboVerification; return }
     'Cases' { Invoke-GazeboCases -CheckOnly:$CheckOnly; return }

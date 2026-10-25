@@ -48,7 +48,7 @@ Dockerを起動してから、プロジェクト直下のPowerShellで実行し�
 
 初回は必要なライブラリを含むイメージをビルドします。
 [JupyterLab](http://localhost:8888/lab?token=roboops-workshop)を開き、
-`notebooks/01_roboops_workshop.ipynb` を上から進めてください。
+`workshop.ipynb` を上から進めてください。
 GazeboとOllamaは、教材の起動・学習・PushT評価には必要ありません。
 
 ポートを変える場合は `.env.example` を `.env` にコピーして `JUPYTER_PORT` を変更します。
@@ -87,17 +87,17 @@ docker compose run --rm workshop python -m roboops train --config configs/train_
 docker compose run --rm workshop python -m roboops evaluate --config configs/eval_ci.yaml
 ```
 
-- 取得元は `lerobot/pusht_keypoints`、revisionは `src/roboops/schema.py` で固定しています。
-- 処理済みデータは `data/processed/pusht_keypoints.npz` に保存します。
+- 取得元は `lerobot/pusht_keypoints`、revisionは `roboops/schema.py` で固定しています。
+- 処理済みデータは `src/pusht_keypoints.npz` に保存します。
 - 学習のweight・config・正規化統計・履歴は、設定されたcheckpointフォルダに保存します。
-- 評価結果や動画は `artifacts/` に保存します。`--save-video` を付けると評価動画を保存できます。
+- 評価結果や動画は `evaluation/` に保存します。`--save-video` を付けると評価動画を保存できます。
 - Notebookの30 epoch学習と、CI向けの短い学習は、用途に合わせて条件が異なります。
 
 `Test` のデータ検査には、先に処理済みデータの作成が必要です。
 学習条件と保存先は `configs/train_ci.yaml`、評価条件と合格基準は `configs/eval_ci.yaml` にあります。
 コマンドの引数は `python -m roboops train --help` などで確認できます。
 ヘルプだけならTorch・LeRobot・Gym・ROSは読み込みません。
-ローカルPythonから直接呼ぶ場合は、プロジェクト直下で `$env:PYTHONPATH = (Resolve-Path src).Path` を設定します。
+ローカルPythonでもプロジェクト直下から `python -m roboops` で実行できます。
 
 ## 操作コマンド
 
@@ -118,19 +118,19 @@ Gazeboの操作：
 - `SimulatorStop` / `SimulatorStatus` / `SimulatorLogs` / `SimulatorShell`：終了・状態・ログ・シェル。
 - `TestExtension`：オフラインのPython検査と統合されたPowerShell検査。
 - `Verify`：実ローカルAIからシミュレータの走行・停止までを検証。
-- `Evaluate`：単一ゴールの実位置評価。`-Driver v5 -GoalX 3 -GoalY 1` などを指定できます。
-- `Cases`：障害物3配置の旧v3試験。終了時に元のワールドと記録を復元します。
-- `Check` / `Demo` / `RunStep2`：通信確認・短いデモ・旧v3の単独走行。
+- `Evaluate`：単一ゴールの実位置評価。`-Driver navigation -GoalX 3 -GoalY 1` などを指定できます。
+- `Cases`：障害物3配置のbaseline制御の比較試験。終了時に元のワールドと記録を復元します。
+- `Check` / `Demo` / `RunReference`：通信確認・短いデモ・baseline制御の単独走行。
 - `Clean`：古いGazeboログを復元用ZIPへ整理。
 
-`Check`・`Demo`・`RunStep2` はロボットを動かします。
+`Check`・`Demo`・`RunReference` はロボットを動かします。
 `Verify`・`Evaluate` はシミュレータを再起動して原点へ戻します。
 `Evaluate`・`Cases`・`Clean` は `-CheckOnly` で準備や対象だけを確認できます。
 ほかの操作に `-CheckOnly` を付けた場合は実行前にエラーにします。
 
 ```powershell
 .\project.ps1 Help
-.\project.ps1 Evaluate -Driver v5 -GoalX 3 -GoalY 1 -CheckOnly
+.\project.ps1 Evaluate -Driver navigation -GoalX 3 -GoalY 1 -CheckOnly
 .\project.ps1 Cases -CheckOnly
 .\project.ps1 Clean -CheckOnly
 ```
@@ -148,39 +148,41 @@ physical-ai-final/
   .env.example              共通の環境設定例
   compose.yaml / Dockerfile 教材の実行環境
   pyproject.toml / uv.lock   教材の依存関係
-  notebooks/                講義本編
+  workshop.ipynb            講義本編（ここから始める）
   configs/                  学習・評価条件
-  src/roboops/
+  roboops/
     __main__.py             データ取得・検査・学習・評価の共通入口
     *.py                    用途別の実装
   tests/
     test_*.py               教材と構成の検査
     Test-Project.ps1        操作コマンドの統合検査
     run_powershell.py        検査用一時ディレクトリの管理
-  extensions/gazebo/
+  gazebo/
     compose.yaml            Gazebo専用の実行環境
-    docker/                 ROS・Gazeboイメージと起動処理
+    Dockerfile / entrypoint.sh  ROS・Gazeboイメージと起動処理
     simulation/             ワールド・センサー・ROSブリッジ
-    scripts/                AI選択・走行・実位置評価・Python検査
-    outputs/                現在の検証記録と最新ログ
-  data/source/              固定revisionの元データと取得記録
-  data/processed/           学習に使うNPZ（どちらもGit対象外）
-  artifacts/                モデル・評価結果・動画（Git対象外）
+    scripts/                AI選択・走行・実位置評価
+    tests/                  Gazeboのオフライン検査
+    outputs/                現在の検証記録と最新ログ（到達評価は world-evaluation/*.json）
+  src/                      元データ・取得記録・学習用NPZ
+  checkpoints/              学習済みモデル・設定・正規化統計
+  evaluation/               評価結果・動画（すべてGit対象外）
   .cache/test-runs/          テスト中の一時データ
-  work/archive/             過去の作業記録の復元用ZIP
+  work/             過去の作業記録の復元用ZIP
 ```
 
 実行環境は教材とGazeboで異なるため、ComposeとDockerfileはそれぞれにあります。
 ビルドの除外設定と環境変数は共用し、操作・テスト・説明・Git設定を重複して置きません。
-GazeboのPython実装は `extensions/gazebo/scripts/` に直接置き、中継だけのファイルや細かな実装用サブフォルダは作りません。
-v3は旧走行試験、v4は比較用、v5は現在の走行処理に使うため残しています。
+GazeboのPython実装は `gazebo/scripts/` に直接置き、中継だけのファイルや細かな実装用サブフォルダは作りません。
+baseline・preciseは `reference_navigation.py --profile baseline` / `--profile precise` で停止距離を選びます。navigationは現在の走行処理です。
+全体検証は `verify_navigation.py`、ROSからの走行要求処理は `verify_navigation.py requested-drive` です。旧名の互換入口はありません。
 
 ## 変更する場所とデータの流れ
 
-最初はNotebookで入出力を確認し、`src/roboops/__main__.py` から `training.py` または `evaluation.py` へ進むと追いやすくなります。
+最初はNotebookで入出力を確認し、`roboops/__main__.py` から `training.py` または `evaluation.py` へ進むと追いやすくなります。
 既存の責務に含まれる処理は、そのモジュールへ追加します。操作入口や設定ファイルを機能ごとに増やす必要はありません。
 
-`src/roboops/` の役割：
+`roboops/` の役割：
 
 - `__main__.py`：サブコマンドの引数と処理の呼び出し。
 - `schema.py`：フィールド名・次元・固定データセット・既定の保存先。
@@ -238,7 +240,7 @@ pwsh -NoProfile -File tests/Test-Project.ps1
 一時ディレクトリの管理には実際のPythonを使い、正常終了・テスト失敗のどちらでもコピーを片付けます。
 `work` はテストの実行場所に使いません。
 
-CIは `.github/workflows/ci.yml` の1ファイルです。
+CIは `.github/workflows/ci.yml` の1ファイルです。この階層はGitHub Actionsの固定配置です。
 `workshop` ジョブはDockerビルド、Ruff、データ取得・検証、pytest、小規模学習、PushT評価を実行します。
 `offline` ジョブはGazeboのPython検査、リポジトリ構成、統合PowerShell検査を実行します。
 オフラインの合格は、実走行や実AIの再検証の合格を意味しません。
@@ -248,7 +250,7 @@ CIは `.github/workflows/ci.yml` の1ファイルです。
 WindowsのDocker Desktop上でROS 2 JazzyとGazebo Harmonicを動かします。
 ホスト側にROSをインストールする必要はありません。
 日本語の目的地選択には、ローカルのOllamaと `qwen3:1.7b` を使います。
-走行と障害物回避はLiDARを使うv5制御が担当します。
+走行と障害物回避はLiDARを使うnavigation制御が担当します。
 
 ```powershell
 .\project.ps1 Simulator
@@ -266,16 +268,16 @@ Ollamaが動いていなければ別のPowerShellで `ollama serve` を起動し
 すべての到達・実AI検証をやり直す場合は、次を拡張フォルダで実行します。
 
 ```powershell
-Push-Location extensions/gazebo
+Push-Location gazebo
 try {
-    python scripts/complete_step3.py --model qwen3:1.7b --recheck-navigation --recheck-ai
+    python scripts/verify_navigation.py --model qwen3:1.7b --recheck-navigation --recheck-ai
 } finally { Pop-Location }
 ```
 
 自分の日本語で選択だけを確認する場合も、拡張フォルダで実行します。
 
 ```powershell
-Push-Location extensions/gazebo
+Push-Location gazebo
 try {
     python scripts/destination_control.py "東側の資材受け渡し場所へ行って" --model qwen3:1.7b
 } finally { Pop-Location }
@@ -283,30 +285,36 @@ try {
 
 実際に走行させる場合は `--execute` を付けます。走行ごとに原点へ戻ります。
 実AIの合格は有限のテスト結果であり、任意の日本語入力で正しく判断する保証ではありません。
-東 `(3, 1)` と南 `(1, -1)` は、それぞれ原点から3回の実位置PASS記録があります。
+東 `(3, 1)` と南 `(1, -1)` の過去の実位置PASS記録は保持しています。
+コマンド・ROSトピック・出力名を役割名に変更したため、現在の構成では到達資格とローカルAIの再検証が必要です。`project.ps1 Verify` で再検証します。古いハッシュを新しいコードに合わせて書き換えることはしません。旧トピック名・旧ハッシュを含む記録は `work/gazebo-history.zip` に原文のまま保管しています。
 未登録・曖昧・停止指示、推論失敗、不正応答、未検証の目的地では走行を開始しません。
 到達基準は実位置で目標の25cm以内です。実位置は評価に使い、経路の選択には使いません。
 連続移動、専用入力画面、教材ACTとGazeboをつなぐadapterは未実装です。
 
-目的地は `extensions/gazebo/scripts/destinations.json` で管理します。
+目的地は `gazebo/scripts/destinations.json` で管理します。
 追加・変更後は拡張フォルダで `python scripts/qualify_destinations.py` と `python scripts/validate_local_ai.py --model qwen3:1.7b` を実行します。
-`destination_control.py`・`drive_to_goal_v5.py`・`evaluate_step2.py`・`validate_local_ai.py` は検証記録とハッシュ照合するため、変更時は対応する実走行・実AIの再検証が必要です。
+`destination_control.py`・`navigate_to_goal.py`・`evaluate_navigation.py`・`validate_local_ai.py` は検証記録とハッシュ照合するため、変更時は対応する実走行・実AIの再検証が必要です。
 合格記録のハッシュを手で更新して通すことはしません。
 
 ## 出力と一時ファイル
 
-- `data/source/`：固定revisionの元データ。`source.json` にrevisionとファイルのSHA-256を記録します。
-- `data/processed/`：学習・検査用に変換したNPZと取得条件。
-- ダウンロードのキャッシュはHugging Face標準の場所（Dockerでは専用ボリューム）に保存し、`data/` へ混ぜません。
-- `artifacts/`：学習済みモデル・評価結果・動画。
-- `extensions/gazebo/outputs/`：現在の検証記録と最新ログ。
+- `src/`：元データを直下の `frames.parquet`（観測・action）、`episodes.parquet`（エピソード情報）、`tasks.parquet`、`info.json`、`stats.json` にまとめます。`source.json` にrevisionとSHA-256を記録します。
+- `.cache/lerobot/`：LeRobotが必要とする `meta/`・`data/chunk-*` の配置を元データから自動生成します。削除しても再生成できます。
+- 学習・検査用の `pusht_keypoints.npz` と取得条件も `src/` 直下に保存します。
+- ダウンロードのキャッシュはHugging Face標準の場所（Dockerでは専用ボリューム）に保存し、`src/` へ混ぜません。
+- `checkpoints/`：教材で学習したモデル・設定・正規化統計・学習履歴。
+- `evaluation/`：評価結果と動画。
+- `.cache/ci/checkpoint/`：CI向けの短い学習で作るモデル。教材の学習済みモデルと保存先を分けます。
+- `gazebo/outputs/`：現在の検証記録と最新ログ。
 - `.cache/test-runs/`：本体のテスト用一時データ。終了時に片付けます。
-- `extensions/gazebo/.cache/`：拡張のテスト用一時データと、再生成できる `offline/` の検査結果。
-- `work/archive/` と拡張内の `work/archive/`：復元用の過去ログ・作業記録のZIP。
+- `gazebo/.cache/`：拡張のテスト用一時データと、再生成できる検査結果（キャッシュ直下のJSON）。
+- `work/gazebo-history.zip`：再生成できない過去の走行ログを残した1個のZIP。移動前のコピーやテスト用バックアップは削除済みです。
+- `gazebo/work/`：今後 `Clean` で古いログを整理する場合に作成するZIPの保存先。
 
 古いGazeboログは `project.ps1 Clean -CheckOnly` で候補を確認し、`project.ps1 Clean` で整理します。
 検証に必要な証跡・最新ログを残し、ZIPの内容をSHA-256で照合してから元の場所を片付けます。
 ZIP内の `__archive_manifest__.json` に元パスとハッシュがあります。
+ZIPは `work/` 直下へ置き、保存済みZIPを再びログ整理の対象にはしません。
 教材データと学習済みモデルはログ整理の対象にしません。
 走行ロック・自動試験マーカーがある場合は整理を開始しません。
 
@@ -317,7 +325,7 @@ ZIP内の `__archive_manifest__.json` に元パスとハッシュがあります
 
 保存対象のルールは `.gitignore`、改行とバイト列のルールは `.gitattributes` にまとめています。
 秘密情報、データ、モデル、通常ログ、キャッシュ、バックアップは保存しません。
-Gazeboの合格記録だけ、ルートの `.gitignore` に明示した例外で保存します。
+Gazeboの現在の検証概要は、ルートの `.gitignore` に明示した例外で保存します。過去の合格記録はローカルの履歴ZIPに保持しています。
 既にGit管理されたファイルは、`.gitignore` の追記だけでは対象から外れない点に注意してください。
 
 両方のDockerビルドでルートの `.dockerignore` を使います。

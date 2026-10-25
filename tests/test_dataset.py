@@ -5,7 +5,7 @@ import numpy as np
 from roboops.data import DatasetBundle, action_chunks, load_npz_dataset
 from roboops.validation import validate
 
-DATASET_PATH = Path("data/processed/pusht_keypoints.npz")
+DATASET_PATH = Path("src/pusht_keypoints.npz")
 
 
 def load_workshop_dataset():

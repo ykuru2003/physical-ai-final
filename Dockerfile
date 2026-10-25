@@ -25,7 +25,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PATH=/opt/venv/bin:${PATH} \
-    PYTHONPATH=/workspace/src \
+    PYTHONPATH=/workspace \
     SDL_VIDEODRIVER=dummy \
     SDL_AUDIODRIVER=dummy
 

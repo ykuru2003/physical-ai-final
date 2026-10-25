@@ -5,8 +5,9 @@
 .DS_Store
 .venv
 .uv-cache
-data
-artifacts
+src
+checkpoints
+evaluation
 outputs
 work
 **/__pycache__

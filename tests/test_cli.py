@@ -44,7 +44,7 @@ class CommandHelpTests(unittest.TestCase):
             with self.subTest(command=name):
                 code = (
                     "import runpy,sys; from pathlib import Path; "
-                    "sys.path.insert(0,str(Path('src').resolve())); "
+                    "sys.path.insert(0,str(Path('.').resolve())); "
                     f"sys.argv=['roboops','{name}','--help']; "
                     "\ntry: runpy.run_module('roboops',run_name='__main__')"
                     "\nexcept SystemExit as error: assert error.code==0"

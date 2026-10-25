@@ -49,15 +49,16 @@ jobs:
         with:
           name: roboops-ci-evidence
           path: |
-            artifacts/checkpoints/lerobot-act-ci/training_metrics.json
-            artifacts/evaluation/metrics-ci.json
+            .cache/ci/checkpoint/training_metrics.json
+            evaluation/metrics-ci.json
+          include-hidden-files: true
           if-no-files-found: warn
 
   offline:
     name: Gazebo Python offline checks
     defaults:
       run:
-        working-directory: extensions/gazebo
+        working-directory: gazebo
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

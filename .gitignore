@@ -38,8 +38,9 @@ id_ed25519
 *.log
 .DS_Store
 Thumbs.db
-/data/
-/artifacts/
+/src/
+/checkpoints/
+/evaluation/
 /outputs/
 work/
 
@@ -50,26 +51,6 @@ work/
 *.mcap
 
 # Version only the reviewed Gazebo evidence; other run artifacts stay local.
-/extensions/gazebo/outputs/*
-!/extensions/gazebo/outputs/local-ai-validation.json
-!/extensions/gazebo/outputs/step3-final-verification.json
-!/extensions/gazebo/outputs/step2-evaluation/
-/extensions/gazebo/outputs/step2-evaluation/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/evaluation.json
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/evaluation.json
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/evaluation.json
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/evaluation.json
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/evaluation.json
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/
-/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/*
-!/extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/evaluation.json
+/gazebo/outputs/*
+!/gazebo/outputs/local-ai-validation.json
+!/gazebo/outputs/navigation-verification.json

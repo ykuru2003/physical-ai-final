@@ -1,0 +1,33 @@
+name: physical-ai-final
+
+services:
+  simulator:
+    build:
+      context: ..
+      dockerfile: gazebo/Dockerfile
+    image: physical-ai-final-simulator:jazzy
+    init: true
+    shm_size: 1gb
+    ports:
+      - "127.0.0.1:${GAZEBO_WEB_PORT:-6080}:6080"
+    environment:
+      DISPLAY: :99
+      ROS_DOMAIN_ID: "${ROS_DOMAIN_ID:-42}"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      GZ_PARTITION: physical-ai-final
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      GALLIUM_DRIVER: llvmpipe
+      QT_X11_NO_MITSHM: "1"
+      QT_QPA_PLATFORM: xcb
+      XDG_RUNTIME_DIR: /tmp/runtime-root
+      DESKTOP_RESOLUTION: "${DESKTOP_RESOLUTION:-1280x800x24}"
+    volumes:
+      - ./simulation:/workspace/simulation:ro
+      - ./scripts:/workspace/scripts:ro
+      - ./outputs:/workspace/outputs
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6080/vnc.html', timeout=3)"]
+      start_period: 90s
+      interval: 15s
+      timeout: 5s
+      retries: 4

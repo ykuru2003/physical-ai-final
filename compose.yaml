@@ -13,7 +13,7 @@ services:
       - .:/workspace
       - huggingface-cache:/root/.cache/huggingface
     environment:
-      PYTHONPATH: /workspace/src
+      PYTHONPATH: /workspace
       HF_HOME: /root/.cache/huggingface
       SDL_VIDEODRIVER: dummy
       SDL_AUDIODRIVER: dummy

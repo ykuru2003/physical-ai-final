@@ -13,18 +13,12 @@ Dockerfile text eol=lf
 *.yml text eol=lf
 
 # Preserve exact bytes used by Gazebo evidence fingerprints.
-extensions/gazebo/simulation/config/bridge.yaml -text
-extensions/gazebo/simulation/launch/simulation.launch.py -text
-extensions/gazebo/simulation/worlds/practice.sdf -text
-extensions/gazebo/scripts/drive_to_goal_v5.py -text
-extensions/gazebo/scripts/evaluate_step2.py -text
-extensions/gazebo/scripts/destination_control.py -text
-extensions/gazebo/scripts/validate_local_ai.py -text
-extensions/gazebo/outputs/local-ai-validation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-1/evaluation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-2/evaluation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155330-747420c1-east_station-3/evaluation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-1/evaluation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-2/evaluation.json -text
-extensions/gazebo/outputs/step2-evaluation/qualify-20261024-155545-573e39d7-south_station-3/evaluation.json -text
-extensions/gazebo/outputs/step3-final-verification.json -text
+gazebo/simulation/config/bridge.yaml -text
+gazebo/simulation/launch/simulation.launch.py -text
+gazebo/simulation/worlds/practice.sdf -text
+gazebo/scripts/navigate_to_goal.py -text
+gazebo/scripts/evaluate_navigation.py -text
+gazebo/scripts/destination_control.py -text
+gazebo/scripts/validate_local_ai.py -text
+gazebo/outputs/local-ai-validation.json -text
+gazebo/outputs/navigation-verification.json -text

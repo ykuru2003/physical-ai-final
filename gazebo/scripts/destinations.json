@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "destinations": [
+    {
+      "id": "east_station",
+      "description": "東ステーション。東側の資材受け渡し場所。",
+      "goal": [
+        3.0,
+        1.0
+      ],
+      "state": "pending_current_runtime_qualification",
+      "note": "Historical navigation PASS logs preserved. Requalify after integration changes before language-driven execution.",
+      "revalidation_reason": "Renamed navigation commands, ROS topics and output paths require fresh runtime evidence.",
+      "historical_evidence": {
+        "archive": "../work/gazebo-history.zip",
+        "registry": "before-role-names/gazebo/scripts/destinations.json"
+      }
+    },
+    {
+      "id": "south_station",
+      "description": "南ステーション。南東側の点検場所。",
+      "goal": [
+        1.0,
+        -1.0
+      ],
+      "state": "pending_current_runtime_qualification",
+      "revalidation_reason": "Renamed navigation commands, ROS topics and output paths require fresh runtime evidence.",
+      "historical_evidence": {
+        "archive": "../work/gazebo-history.zip",
+        "registry": "before-role-names/gazebo/scripts/destinations.json"
+      }
+    },
+    {
+      "id": "south_near",
+      "description": "南側の手前の待機所。",
+      "goal": [
+        0.5,
+        -1.0
+      ],
+      "state": "pending_current_runtime_qualification"
+    },
+    {
+      "id": "west_station",
+      "description": "西ステーション。西側の待機所。",
+      "goal": [
+        -1.0,
+        0.0
+      ],
+      "state": "pending_current_runtime_qualification"
+    }
+  ]
+}
